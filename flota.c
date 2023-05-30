@@ -1,4 +1,6 @@
 #include<stdio.h>
+#include <unistd.h>
+#include <sys/types.h>
 /* 
 0 = agua sin tocar
 1 = agua tocada
@@ -203,8 +205,124 @@ void generar_mapas(){
     fclose(archivo);
     printf("Los mapas se han escrito correctamente en el archivo 'mapas.txt'.\n");
 }
+void imprimirMapa(int **mapa, int filas, int columnas) {
+    for (int i = 0; i < filas; i++) {
+        for (int j = 0; j < columnas; j++) {
+            printf("%d ", mapa[i][j]);
+        }
+        printf("\n");
+    }
+}
+
+void liberarMapa(int **mapa, int filas) {
+    for (int i = 0; i < filas; i++) {
+        free(mapa[i]);
+    }
+    free(mapa);
+}
+void leermapa(){
+    FILE *archivo;
+    int **mapa1;
+    int **mapa2;
+    int filas1 = 0, columnas1 = 0;
+    int filas2 = 0, columnas2 = 0;
+    int valor;
+
+    archivo = fopen("mapas.txt", "r");
+    if (archivo == NULL) {
+        fprintf(stderr, "Error al abrir el archivo\n");
+        return 1;
+    }
+
+    // Leer el Mapa 1
+    printf("Mapa 1:\n");
+    while (fscanf(archivo, "%d", &valor) == 1) {
+        if (columnas1 == 0) {
+            columnas1++;
+            mapa1 = (int **)malloc(sizeof(int *));
+        } else if (columnas1 > 0 && columnas1 % columnas1 == 0) {
+            columnas1++;
+            mapa1 = (int **)realloc(mapa1, columnas1 * sizeof(int *));
+        }
+
+        mapa1[columnas1 - 1] = (int *)malloc(sizeof(int));
+        mapa1[columnas1 - 1][filas1] = valor;
+        filas1++;
+    }
+    fclose(archivo);
+
+    // Obtener el número de filas y columnas
+    filas1 /= columnas1;
+
+    // Imprimir el Mapa 1
+    imprimirMapa(mapa1, filas1, columnas1);
+
+    // Leer el Mapa 2
+    archivo = fopen("mapas.txt", "r");
+    if (archivo == NULL) {
+        fprintf(stderr, "Error al abrir el archivo\n");
+        return 1;
+    }
+
+    printf("\nMapa 2:\n");
+    while (fscanf(archivo, "%d", &valor) == 1) {
+        if (columnas2 == 0) {
+            columnas2++;
+            mapa2 = (int **)malloc(sizeof(int *));
+        } else if (columnas2 > 0 && columnas2 % columnas2 == 0) {
+            columnas2++;
+            mapa2 = (int **)realloc(mapa2, columnas2 * sizeof(int *));
+        }
+
+        mapa2[columnas2 - 1] = (int *)malloc(sizeof(int));
+        mapa2[columnas2 - 1][filas2] = valor;
+        filas2++;
+    }
+    fclose(archivo);
+
+    // Obtener el número de filas y columnas
+    filas2 /= columnas2;
+
+    // Imprimir el Mapa 2
+    imprimirMapa(mapa2, filas2, columnas2);
+
+       // Liberar la memoria
+    liberarMapa(mapa1, columnas1);
+    liberarMapa(mapa2, columnas2);
+}
+void disparacion(){
+
+}
 int main() {
     generar_mapas();
+     pid_t pid1, pid2;
+
+    pid1 = fork(); // Crear el primer proceso hijo
+
+    if (pid1 < 0) {
+        fprintf(stderr, "Error al crear el primer proceso hijo\n");
+        return 1;
+    } else if (pid1 == 0) {
+        // Código ejecutado por el primer proceso hijo
+        disparacion();
+        return 0;
+    }
+
+    pid2 = fork(); // Crear el segundo proceso hijo
+
+    if (pid2 < 0) {
+        fprintf(stderr, "Error al crear el segundo proceso hijo\n");
+        return 1;
+    } else if (pid2 == 0) {
+        // Código ejecutado por el segundo proceso hijo
+        disparacion();
+        return 0;
+    }
+
+    // Código ejecutado por el proceso padre
+    wait(NULL); // Esperar a que el primer hijo termine
+    wait(NULL); // Esperar a que el segundo hijo termine
+    
     return 0;
 
 }
