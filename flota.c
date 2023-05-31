@@ -315,7 +315,7 @@ int y3;
 
 
 int main() {
-    generar_mapas();    
+    generar_mapas();
     return 0;
 
 }
