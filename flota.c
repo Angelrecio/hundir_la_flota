@@ -5,11 +5,11 @@
 0 = agua sin tocar
 1 = agua tocada
 2 = portaviones 
-3 = portaviones hit
+3 = portaviones tocado
 4 = bombardero
-5 = bombardero hit
+5 = bombardero tocado
 6 = fragata
-7 = fragata hit
+7 = fragata tocado
 8 = hundido
 */
 void generar_mapas(){
@@ -35,6 +35,7 @@ void generar_mapas(){
     int x2;
     int y2;
 
+    printf("------------------------------------------------------------Turno de rellenar el jugador 1------------------------------\n");
     // bombardeen caracas
     printf("Escribe la coordenada del bombardero en X \n");
     scanf("%d", &x2);
@@ -149,19 +150,123 @@ void generar_mapas(){
     default:
         break;
     }
-    //predeterminado para testing
-    // portaavion
-    mapa2[3][2] = 6;
-    mapa2[3][3] = 6;
-    mapa2[3][4] = 6;
-    mapa2[3][5] = 6;
-    // bombardero
-    mapa2[0][2] = 4;
-    mapa2[1][2] = 4;
-    mapa2[2][2] = 4;
-     // fragata
-    mapa2[5][5] = 2;
-    mapa2[5][4] = 2;
+printf("------------------------------------------------------------Turno de rellenar el jugador 2------------------------------\n");
+int x3;
+int y3;
+   // bombardeen caracas
+    printf("Escribe la coordenada del bombardero en X \n");
+    scanf("%d", &x3);
+    printf("Escribe la coordenada del bombardero en Y \n");
+    scanf("%d", &y3);
+    fflush(stdout); // Limpiar el buffer de salida
+    printf("Escribe v si lo quieres colocar en vertical o h si es en horizontal \n");
+    
+    scanf(" %c", &direccion);
+    switch (direccion)
+    {
+    case 'h':
+        int i;
+        for (i = 0; i < 3; i++) {
+            if(mapa2[x3 + i][y3] == 2){
+                printf("Mal hecho cruck");
+                break;
+            }
+            else{
+            mapa2[x3 + i][y3] = 4;}
+        }
+        break;
+    case 'v':
+         int i2;
+        for (i2 = 0; i2 < 3; i2++) {
+            if(mapa2[x3 + i2][y3] == 2){
+                printf("Mal hecho cruck");
+                break;
+            }
+            else{
+            mapa2[x3][y+ i2]= 4;}
+        }
+        break;
+
+    default:
+        break;
+    }
+ // fragatas
+    int cordx2;
+    int cordy2;
+    printf("Escribe la coordenada de la fragata en X \n");
+    scanf("%d", &cordx2);
+    printf("Escribe la coordenada de la fragata en Y \n");
+    scanf("%d", &cordy2);
+    fflush(stdout); // Limpiar el buffer de salida
+    printf("Escribe v si lo quieres colocar en vertical o h si es en horizontal \n");
+    scanf(" %c", &direccion);
+    switch (direccion)
+    {
+    case 'h':
+        int i;
+        for (i = 0; i < 2; i++) {
+            if(mapa2[cordx2 + i][cordy2] == 4){
+                printf("Mal hecho cruck");
+                break;
+            }
+            else{
+            mapa2[cordx2 + i][cordy2] = 6;}
+        }
+        break;
+    case 'v':
+         int i3;
+        for (i3 = 0; i3 < 2; i3++) {
+            if(mapa2[cordx2 + i3][cordy2] == 4){
+                printf("Mal hecho cruck");
+                break;
+            }
+            else{
+            mapa2[cordx2][cordy2+ i3] = 6;}
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    // portamos tu coche
+    int portx2;
+    int porty2;
+    printf("Escribe la coordenada del portaviones en X \n");
+    scanf("%d", &portx2);
+    printf("Escribe la coordenada de la portaviones en Y \n");
+    scanf("%d", &porty2);
+    fflush(stdout); // Limpiar el buffer de salida
+    printf("Escribe v si lo quieres colocar en vertical o h si es en horizontal \n");
+    scanf(" %c", &direccion);
+    switch (direccion)
+    {
+    case 'h':
+        int i;
+        for (i = 0; i < 4; i++) {
+            if(mapa2[portx2 + i][porty2] == 4||mapa2[portx2 + i][porty2] == 6){
+                printf("Mal hecho cruck");
+                break;
+            }
+            else{
+            mapa2[portx2 + i][porty2] = 2;}
+        }
+        break;
+    case 'v':
+         int i3;
+        for (i3 = 0; i3 < 4; i3++) {
+            if(mapa2[portx2 + i3][porty2] == 4 || mapa2[portx2 + i][porty2] == 6){
+                printf("Mal hecho cruck");
+                break;
+            }
+            else{
+            mapa2[portx2][porty2+ i3] = 2;}
+        }
+        break;
+
+    default:
+        break;
+    }
     // rellenar el arenero de agua
     int itx;
     int ity;
@@ -205,125 +310,9 @@ void generar_mapas(){
     fclose(archivo);
     printf("Los mapas se han escrito correctamente en el archivo 'mapas.txt'.\n");
 }
-void imprimirMapa(int **mapa, int filas, int columnas) {
-    for (int i = 0; i < filas; i++) {
-        for (int j = 0; j < columnas; j++) {
-            printf("%d ", mapa[i][j]);
-        }
-        printf("\n");
-    }
-}
-
-void liberarMapa(int **mapa, int filas) {
-    for (int i = 0; i < filas; i++) {
-        free(mapa[i]);
-    }
-    free(mapa);
-}
-void leermapa(){
-    FILE *archivo;
-    int **mapa1;
-    int **mapa2;
-    int filas1 = 0, columnas1 = 0;
-    int filas2 = 0, columnas2 = 0;
-    int valor;
-
-    archivo = fopen("mapas.txt", "r");
-    if (archivo == NULL) {
-        fprintf(stderr, "Error al abrir el archivo\n");
-        return 1;
-    }
-
-    // Leer el Mapa 1
-    printf("Mapa 1:\n");
-    while (fscanf(archivo, "%d", &valor) == 1) {
-        if (columnas1 == 0) {
-            columnas1++;
-            mapa1 = (int **)malloc(sizeof(int *));
-        } else if (columnas1 > 0 && columnas1 % columnas1 == 0) {
-            columnas1++;
-            mapa1 = (int **)realloc(mapa1, columnas1 * sizeof(int *));
-        }
-
-        mapa1[columnas1 - 1] = (int *)malloc(sizeof(int));
-        mapa1[columnas1 - 1][filas1] = valor;
-        filas1++;
-    }
-    fclose(archivo);
-
-    // Obtener el número de filas y columnas
-    filas1 /= columnas1;
-
-    // Imprimir el Mapa 1
-    imprimirMapa(mapa1, filas1, columnas1);
-
-    // Leer el Mapa 2
-    archivo = fopen("mapas.txt", "r");
-    if (archivo == NULL) {
-        fprintf(stderr, "Error al abrir el archivo\n");
-        return 1;
-    }
-
-    printf("\nMapa 2:\n");
-    while (fscanf(archivo, "%d", &valor) == 1) {
-        if (columnas2 == 0) {
-            columnas2++;
-            mapa2 = (int **)malloc(sizeof(int *));
-        } else if (columnas2 > 0 && columnas2 % columnas2 == 0) {
-            columnas2++;
-            mapa2 = (int **)realloc(mapa2, columnas2 * sizeof(int *));
-        }
-
-        mapa2[columnas2 - 1] = (int *)malloc(sizeof(int));
-        mapa2[columnas2 - 1][filas2] = valor;
-        filas2++;
-    }
-    fclose(archivo);
-
-    // Obtener el número de filas y columnas
-    filas2 /= columnas2;
-
-    // Imprimir el Mapa 2
-    imprimirMapa(mapa2, filas2, columnas2);
-
-       // Liberar la memoria
-    liberarMapa(mapa1, columnas1);
-    liberarMapa(mapa2, columnas2);
-}
-void disparacion(){
-
-}
 int main() {
     generar_mapas();
-     pid_t pid1, pid2;
-
-    pid1 = fork(); // Crear el primer proceso hijo
-
-    if (pid1 < 0) {
-        fprintf(stderr, "Error al crear el primer proceso hijo\n");
-        return 1;
-    } else if (pid1 == 0) {
-        // Código ejecutado por el primer proceso hijo
-        disparacion();
-        return 0;
-    }
-
-    pid2 = fork(); // Crear el segundo proceso hijo
-
-    if (pid2 < 0) {
-        fprintf(stderr, "Error al crear el segundo proceso hijo\n");
-        return 1;
-    } else if (pid2 == 0) {
-        // Código ejecutado por el segundo proceso hijo
-        disparacion();
-        return 0;
-    }
-
-    // Código ejecutado por el proceso padre
-    wait(NULL); // Esperar a que el primer hijo termine
-    wait(NULL); // Esperar a que el segundo hijo termine
     
     return 0;
 
 }
-
