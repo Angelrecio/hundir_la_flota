@@ -313,26 +313,9 @@ int y3;
     printf("Los mapas se han escrito correctamente en el archivo 'mapas.txt'.\n");
 }
 
-void mostrar_mapas() {
-    FILE *archivo = fopen("mapas.txt", "r");
-    
-    if (archivo == NULL) {
-        printf("No se pudo abrir el archivo.\n");
-        return;
-    }
-    
-    char caracter;
-    while ((caracter = fgetc(archivo)) != EOF) {
-        printf("%c", caracter);
-    }
-    
-    fclose(archivo);
-}
 
 int main() {
-    generar_mapas();
-    mostrar_mapas();
-    
+    generar_mapas();    
     return 0;
 
 }
