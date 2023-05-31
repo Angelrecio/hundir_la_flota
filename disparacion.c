@@ -65,6 +65,29 @@ void leer_mapas(const char* nombre_archivo, int*** mapa1, int*** mapa2, int* fil
     fclose(archivo);
 }
 
+void eliminar_linea_ceros_adicional(int*** mapa, int* filas_mapa, int columnas) {
+    int filas_nuevas = *filas_mapa;
+    // Verificar si la última fila es una línea de ceros
+    if (*filas_mapa > 0) {
+        int es_linea_ceros = 1;
+        for (int j = 0; j < columnas; j++) {
+            if ((*mapa)[*filas_mapa - 1][j] != 0) {
+                es_linea_ceros = 0;
+                break;
+            }
+        }
+        // Si es una línea de ceros, eliminarla
+        if (es_linea_ceros) {
+            filas_nuevas--;
+            free((*mapa)[*filas_mapa - 1]);
+        }
+    }
+
+    // Redimensionar el arreglo de filas
+    *mapa = (int**)realloc(*mapa, filas_nuevas * sizeof(int*));
+    *filas_mapa = filas_nuevas;
+}
+
 int main() {
     const char* nombre_archivo = "mapas.txt";
     int filas_mapa1 = 0;
@@ -74,6 +97,7 @@ int main() {
     int** mapa2 = NULL;
 
     leer_mapas(nombre_archivo, &mapa1, &mapa2, &filas_mapa1, &filas_mapa2, &columnas);
+    eliminar_linea_ceros_adicional(&mapa1, &filas_mapa1, columnas);
 
     printf("Mapa 1:\n");
     for (int i = 0; i < filas_mapa1; i++) {
