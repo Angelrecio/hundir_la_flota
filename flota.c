@@ -12,6 +12,8 @@
 7 = fragata tocado
 8 = hundido
 */
+
+
 void generar_mapas(){
     int x;
     int y;
@@ -310,8 +312,26 @@ int y3;
     fclose(archivo);
     printf("Los mapas se han escrito correctamente en el archivo 'mapas.txt'.\n");
 }
+
+void mostrar_mapas() {
+    FILE *archivo = fopen("mapas.txt", "r");
+    
+    if (archivo == NULL) {
+        printf("No se pudo abrir el archivo.\n");
+        return;
+    }
+    
+    char caracter;
+    while ((caracter = fgetc(archivo)) != EOF) {
+        printf("%c", caracter);
+    }
+    
+    fclose(archivo);
+}
+
 int main() {
     generar_mapas();
+    mostrar_mapas();
     
     return 0;
 
