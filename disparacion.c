@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
 
 void leer_mapas(const char* nombre_archivo, int*** mapa1, int*** mapa2, int* filas_mapa1, int* filas_mapa2, int* columnas) {
     FILE* archivo = fopen(nombre_archivo, "r");
@@ -115,7 +117,36 @@ int main() {
         printf("\n");
     }
 
+        pid_t pid1, pid2;
 
+    // Crear el primer hijo
+    pid1 = fork();
+
+    if (pid1 == 0) {
+        // Código para el primer hijo
+        printf("Proceso hijo 1. PID: %d\n", getpid());
+        // Realizar tareas del primer hijo
+    } else if (pid1 > 0) {
+        // Proceso padre
+        // Crear el segundo hijo
+        pid2 = fork();
+
+        if (pid2 == 0) {
+            // Código para el segundo hijo
+            printf("Proceso hijo 2. PID: %d\n", getpid());
+            // Realizar tareas del segundo hijo
+        } else if (pid2 > 0) {
+            // Proceso padre
+            printf("Proceso padre. PID: %d\n", getpid());
+            // Realizar tareas del proceso padre
+        } else {
+            // Error al crear el segundo hijo
+            printf("Error al crear el segundo hijo.\n");
+        }
+    } else {
+        // Error al crear el primer hijo
+        printf("Error al crear el primer hijo.\n");
+    }
 
 
 
