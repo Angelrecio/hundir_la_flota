@@ -17,6 +17,8 @@
 */
 
 
+
+
 void generar_mapas(){
     int x;
     int y;
@@ -34,8 +36,12 @@ void generar_mapas(){
         exigir = 0;
         }
     }
-    int mapa1[x][y];
-    int mapa2[x][y];
+    int **mapa1 = (int **)malloc(y * sizeof(int *));
+    int **mapa2 = (int **)malloc(y * sizeof(int *));
+    for (int i = 0; i < y; i++) {
+        mapa1[i] = (int *)malloc(x * sizeof(int));
+        mapa2[i] = (int *)malloc(x * sizeof(int));
+    }
     char direccion;
     int x2;
     int y2;
@@ -311,14 +317,25 @@ int y3;
         }
         fprintf(archivo, "\n");
     }
-    
+
+    // Liberar memoria
+    for (int i = 0; i < y; i++) {
+        free(mapa1[i]);
+        free(mapa2[i]);
+    }
+    free(mapa1);
+    free(mapa2);
+
+
+
+    sleep(1);
     fclose(archivo);
     printf("Los mapas se han escrito correctamente en el archivo 'mapas.txt'.\n");
 }
 
 
-int main() {
+/*int main() {
     generar_mapas();
     return 0;
 
-}
+}*/

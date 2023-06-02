@@ -41,7 +41,7 @@ int cargarTableros(Tablero* jugador1, Tablero* jugador2, const char* archivo1, c
     return 0;
 }
 
-int main() {
+int coordinacion_main() {
     Tablero jugador1, jugador2;
 
     if (cargarTableros(&jugador1, &jugador2, "tablero1.txt", "tablero2.txt") == -1) {
