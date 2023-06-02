@@ -14,6 +14,7 @@ typedef struct {
 typedef struct {
     char tipo[20];
     Coordenada posiciones[MAX_BARCOS];
+    Coordenada posiciones_finales[MAX_BARCOS];
     int num_barcos;
 } TipoBarco;
 
@@ -46,10 +47,12 @@ void cargarTablero(const char* archivo, Tablero* tablero) {
         if (num_barcos > 0) {
             tipoBarco.num_barcos = num_barcos;
             for (int j = 0; j < num_barcos; j++) {
-                int x, y;
-                fscanf(file, "%d %d", &x, &y);
-                tipoBarco.posiciones[j].x = x;
-                tipoBarco.posiciones[j].y = y;
+                int x1, y1, x2, y2;
+                fscanf(file, "%d %d, %d %d", &x1, &y1, &x2, &y2);
+                tipoBarco.posiciones[j].x = x1;
+                tipoBarco.posiciones[j].y = y1;
+                tipoBarco.posiciones_finales[j].x = x2;
+                tipoBarco.posiciones_finales[j].y = y2;
             }
             tablero->tipos[tablero->num_tipos] = tipoBarco;
             tablero->num_tipos++;
@@ -67,7 +70,9 @@ void imprimirTablero(const Tablero* tablero) {
         printf("Barco: %s\n", tipoBarco.tipo);
         for (int j = 0; j < tipoBarco.num_barcos; j++) {
             Coordenada coordenada = tipoBarco.posiciones[j];
-            printf("Posición: %d, %d\n", coordenada.x, coordenada.y);
+            Coordenada coordenada_final = tipoBarco.posiciones_finales[j];
+            printf("Posición inicial: %d, %d\n", coordenada.x, coordenada.y);
+            printf("Posición final: %d, %d\n", coordenada_final.x, coordenada_final.y);
         }
         printf("\n");
     }
