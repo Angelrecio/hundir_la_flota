@@ -67,6 +67,8 @@ void crearTablero(const char* archivo) {
     printf("El archivo \"%s\" se ha creado correctamente.\n", archivo);
 }
 
+
+
 int main() {
     crearTablero("tablero1.txt");
     crearTablero("tablero2.txt");
