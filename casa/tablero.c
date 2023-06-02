@@ -69,26 +69,27 @@ void crearTablero(const char* archivo) {
             scanf(" %c", &orientacion);
 
             if (orientacion == 'h') {
-                for (int k = 0; k < MAX_BARCOS; k++) {
-                    tablero.posiciones[j + k].x = x + k;
-                    tablero.posiciones[j + k].y = y;
+                for (int k = 0; k < i; k++) {
+                    tablero.posiciones[j * i + k].x = x + k;
+                    tablero.posiciones[j * i + k].y = y;
                 }
             } else if (orientacion == 'v') {
-                for (int k = 0; k < MAX_BARCOS; k++) {
-                    tablero.posiciones[j + k].x = x;
-                    tablero.posiciones[j + k].y = y + k;
+                for (int k = 0; k < i; k++) {
+                    tablero.posiciones[j * i + k].x = x;
+                    tablero.posiciones[j * i + k].y = y + k;
                 }
             } else {
                 printf("Orientación inválida. Se asumirá una orientación horizontal.\n");
-                for (int k = 0; k < MAX_BARCOS; k++) {
-                    tablero.posiciones[j + k].x = x + k;
-                    tablero.posiciones[j + k].y = y;
+                for (int k = 0; k < i; k++) {
+                    tablero.posiciones[j * i + k].x = x + k;
+                    tablero.posiciones[j * i + k].y = y;
                 }
             }
         }
 
+        fprintf(file, "%d\n", num_barcos);
         for (int j = 0; j < num_barcos; j++) {
-            fprintf(file, "%d %d\n", tablero.posiciones[j].x, tablero.posiciones[j].y);
+            fprintf(file, "%d %d, %d %d\n", tablero.posiciones[j * i].x, tablero.posiciones[j * i].y, tablero.posiciones[j * i + i - 1].x, tablero.posiciones[j * i + i - 1].y);
         }
 
         free(tablero.posiciones);
