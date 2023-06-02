@@ -1,10 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include <unistd.h>
+#include <time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <fcntl.h>
+#include <semaphore.h>
+#include <sys/stat.h>
 
 #define MAX_DIMENSION 10
 #define MIN_DIMENSION 5
@@ -84,6 +87,70 @@ void imprimirTablero(const Tablero* tablero) {
     }
 }
 
+
+
+void escribirDisparo(const char* archivo, const char* mensaje) {
+    sem_t* semaforo = sem_open("/disparos_semaphore", O_CREAT, 0666, 1);
+    if (semaforo == SEM_FAILED) {
+        perror("Error al abrir el semáforo");
+        return;
+    }
+
+    int fd = open(archivo, O_RDWR | O_CREAT, 0666);
+    if (fd == -1) {
+        perror("Error al abrir el archivo de disparos");
+        sem_close(semaforo);
+        return;
+    }
+
+    if (sem_wait(semaforo) == -1) { // Bloquear el semáforo
+        perror("Error al bloquear el semáforo");
+        close(fd);
+        sem_close(semaforo);
+        return;
+    }
+
+    char buffer[1024];
+    ssize_t bytesRead = read(fd, buffer, sizeof(buffer) - 1);
+    if (bytesRead == -1) {
+        perror("Error al leer el archivo de disparos");
+        sem_post(semaforo); // Desbloquear el semáforo
+        sem_close(semaforo);
+        close(fd);
+        return;
+    }
+
+    buffer[bytesRead] = '\0'; // Agregar el terminador de cadena
+
+    lseek(fd, 0, SEEK_SET); // Mover el cursor al inicio del archivo
+
+    char resultado_disparo[100];
+    sprintf(resultado_disparo, "%s\n", mensaje);
+
+    ssize_t bytesWritten = write(fd, resultado_disparo, strlen(resultado_disparo));
+    if (bytesWritten == -1) {
+        perror("Error al escribir en el archivo de disparos");
+        sem_post(semaforo); // Desbloquear el semáforo
+        sem_close(semaforo);
+        close(fd);
+        return;
+    }
+
+    bytesWritten = write(fd, buffer, strlen(buffer));
+    if (bytesWritten == -1) {
+        perror("Error al escribir en el archivo de disparos");
+        sem_post(semaforo); // Desbloquear el semáforo
+        sem_close(semaforo);
+        close(fd);
+        return;
+    }
+
+    sem_post(semaforo); // Desbloquear el semáforo
+    sem_close(semaforo);
+    close(fd);
+}
+
+
 void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOponente) {
     srand(time(NULL) + jugador);  // Inicializar la semilla para generar números aleatorios
 
@@ -157,10 +224,16 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
         if (tipoBarco) {
             printf("¡El jugador %d ha acertado en un barco del jugador %d! Coordenadas: %d, %d\n", jugador, oponente, coordenada.x, coordenada.y);
             ultima_direccion = 0; // Reiniciar la dirección
+            char mensaje[50];
+            sprintf(mensaje, "Jugador %d: %d, %d : acertado\n", jugador, coordenada.x, coordenada.y);
+            escribirDisparo("disparos.txt", mensaje);
         } else {
             printf("El jugador %d ha disparado al agua. Coordenadas: %d, %d\n", jugador, coordenada.x, coordenada.y);
             if (disparo_aleatorio) {
                 ultima_direccion = 0; // Reiniciar la dirección si el disparo fue aleatorio
+                char mensaje[50];
+                sprintf(mensaje, "Jugador %d: %d, %d : fallado\n", jugador, coordenada.x, coordenada.y);
+                escribirDisparo("disparos.txt", mensaje);
             }
         }
 
@@ -169,39 +242,55 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
         // Esperar un tiempo aleatorio entre 0 y 10 segundos antes de realizar el siguiente disparo
         int tiempoEspera = rand() % 11;
         sleep(tiempoEspera);
+
+        
     }
 }
 
 int main() {
-    Tablero tablero1, tablero2;
-
+    Tablero tablero1;
     cargarTablero("tablero1.txt", &tablero1);
+
+    Tablero tablero2;
     cargarTablero("tablero2.txt", &tablero2);
 
+    printf("Tablero del jugador 1:\n");
     imprimirTablero(&tablero1);
+
+    printf("Tablero del jugador 2:\n");
     imprimirTablero(&tablero2);
 
-    // Crear un proceso hijo para el jugador 1
-    pid_t pidtablero1 = fork();
+    pid_t pid1, pid2;
+    int status1, status2;
 
-    if (pidtablero1 == 0) {
-        // Proceso hijo para el jugador 1
+    pid1 = fork();
+    if (pid1 == 0) {
+        // Proceso del jugador 1 (atacante)
         atacante(1, &tablero1, &tablero2);
         exit(0);
+    } else if (pid1 > 0) {
+        pid2 = fork();
+        if (pid2 == 0) {
+            // Proceso del jugador 2 (atacante)
+            atacante(2, &tablero2, &tablero1);
+            exit(0);
+        } else if (pid2 > 0) {
+            // Proceso del juego
+            waitpid(pid1, &status1, 0);
+            waitpid(pid2, &status2, 0);
+
+            if (WIFEXITED(status1)) {
+                printf("El jugador 1 ha finalizado\n");
+            }
+            if (WIFEXITED(status2)) {
+                printf("El jugador 2 ha finalizado\n");
+            }
+        } else {
+            perror("Error al crear el proceso del jugador 2");
+        }
+    } else {
+        perror("Error al crear el proceso del jugador 1");
     }
-
-    // Crear un proceso hijo para el jugador 2
-    pid_t pidJugador2 = fork();
-
-    if (pidJugador2 == 0) {
-        // Proceso hijo para el jugador 2
-        atacante(2, &tablero2, &tablero1);
-        exit(0);
-    }
-
-    // Esperar a que ambos procesos hijos terminen
-    waitpid(pidtablero1, NULL, 0);
-    waitpid(pidJugador2, NULL, 0);
 
     return 0;
 }
