@@ -1,8 +1,9 @@
-9 9
-Portaviones 2
-1 1
-2 2
+6 6
+Portaviones 1
+0 0
 Bombarderos 1
-5 5
+1 0
 Fragatas 1
-8 8
+2 0
+3 0
+4 0

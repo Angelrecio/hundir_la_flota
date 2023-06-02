@@ -12,7 +12,7 @@ typedef struct {
 
 typedef struct {
     char tipo[20];
-    Coordenada posiciones[MAX_BARCOS];
+    Coordenada* posiciones;
     int num_barcos;
 } Tablero;
 
@@ -55,19 +55,48 @@ void crearTablero(const char* archivo) {
                 break;
         }
 
+        Tablero tablero;
+        tablero.num_barcos = num_barcos;
+        tablero.posiciones = malloc(num_barcos * sizeof(Coordenada));
+
         for (int j = 0; j < num_barcos; j++) {
             int x, y;
             printf("Introduce las coordenadas del barco %d (formato: X Y): ", j + 1);
             scanf("%d %d", &x, &y);
-            fprintf(file, "%d %d\n", x, y);
+
+            char orientacion;
+            printf("Introduce la orientación del barco (horizontal 'h' o vertical 'v'): ");
+            scanf(" %c", &orientacion);
+
+            if (orientacion == 'h') {
+                for (int k = 0; k < MAX_BARCOS; k++) {
+                    tablero.posiciones[j + k].x = x + k;
+                    tablero.posiciones[j + k].y = y;
+                }
+            } else if (orientacion == 'v') {
+                for (int k = 0; k < MAX_BARCOS; k++) {
+                    tablero.posiciones[j + k].x = x;
+                    tablero.posiciones[j + k].y = y + k;
+                }
+            } else {
+                printf("Orientación inválida. Se asumirá una orientación horizontal.\n");
+                for (int k = 0; k < MAX_BARCOS; k++) {
+                    tablero.posiciones[j + k].x = x + k;
+                    tablero.posiciones[j + k].y = y;
+                }
+            }
         }
+
+        for (int j = 0; j < num_barcos; j++) {
+            fprintf(file, "%d %d\n", tablero.posiciones[j].x, tablero.posiciones[j].y);
+        }
+
+        free(tablero.posiciones);
     }
 
     fclose(file);
     printf("El archivo \"%s\" se ha creado correctamente.\n", archivo);
 }
-
-
 
 int main() {
     crearTablero("tablero1.txt");

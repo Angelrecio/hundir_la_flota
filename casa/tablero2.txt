@@ -1,8 +1,4 @@
-9 9
-Portaviones 2
-1 1
-2 2
-Bombarderos 1
-5 5
-Fragatas 1
-8 8
+6 6
+Portaviones 0
+Bombarderos 0
+Fragatas 0
