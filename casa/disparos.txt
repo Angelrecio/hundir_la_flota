@@ -1,19 +1,20 @@
-PID 29275 Jugador 2: 3, 3 : fallado
-PID 29275 Jugador 2: 3, 1 : fallado
-PID 29274 Jugador 1: 3, 3 : fallado
-PID 29274 Jugador 1: 0, 0 : acertado
-PID 29274 Jugador 1: 1, 1 : acertado
-PID 29275 Jugador 2: 4, 2 : fallado
-PID 29274 Jugador 1: 2, 0 : fallado
-Jugador 2: 2, 3 : fallado
- PID: 28614
-Jugador 1: 1, 0 : fallado
- PID: 28612
-Jugador 2: 2, 1 : fallado
- PID: 28614
-Jugador 1: 0, 0 : acertado
- PID: 28612
-Jugador 2: 1, 3 : fallado
- PID: 28614
-Jugador 2: 3, 2 : fallado
- PID: 28614
+PID 211905 Jugador 1: 1, 1 : acertado
+PID 211906 Jugador 2: 2, 3 : fallado
+PID 211906 Jugador 2: 1, 3 : fallado
+PID 211906 Jugador 2: 0, 3 : fallado
+PID 211905 Jugador 1: 4, 4 : fallado
+PID 211906 Jugador 2: 0, 2 : acertado
+PID 211905 Jugador 1: 2, 2 : fallado
+PID 211906 Jugador 2: 2, 2 : fallado
+PID 211905 Jugador 1: 0, 1 : acertado
+PID 211906 Jugador 2: 3, 4 : fallado
+PID 211906 Jugador 2: 1, 4 : fallado
+PID 211906 Jugador 2: 1, 1 : acertado
+PID 211905 Jugador 1: 0, 1 : acertado
+PID 211905 Jugador 1: 1, 1 : acertado
+PID 211906 Jugador 2: 4, 4 : fallado
+PID 211905 Jugador 1: 1, 1 : acertado
+PID 211906 Jugador 2: 2, 2 : fallado
+PID 211905 Jugador 1: 0, 3 : fallado
+PID 211906 Jugador 2: 2, 0 : acertado
+PID 211905 Jugador 1: 1, 3 : fallado

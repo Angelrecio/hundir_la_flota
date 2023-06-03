@@ -21,9 +21,11 @@ typedef struct {
 typedef struct {
     char tipo[20];
     Coordenada posiciones[MAX_BARCOS];
+    Coordenada posiciones_intermedias[MAX_BARCOS][MAX_DIMENSION];
     Coordenada posiciones_finales[MAX_BARCOS];
     int num_barcos;
     int num_barcos_hundidos; // Número de barcos hundidos
+    int num_intermedias[MAX_BARCOS]; // Número de coordenadas intermedias para cada barco
 } TipoBarco;
 
 typedef struct {
@@ -54,14 +56,27 @@ void cargarTablero(const char* archivo, Tablero* tablero) {
 
         if (num_barcos > 0) {
             tipoBarco.num_barcos = num_barcos;
-            tipoBarco.num_barcos_hundidos = 0; // Inicializar el contador de barcos hundidos
+            tipoBarco.num_barcos_hundidos = 0;
             for (int j = 0; j < num_barcos; j++) {
-                int x1, y1, x2, y2;
-                fscanf(file, "%d %d, %d %d", &x1, &y1, &x2, &y2);
-                tipoBarco.posiciones[j].x = x1;
-                tipoBarco.posiciones[j].y = y1;
-                tipoBarco.posiciones_finales[j].x = x2;
-                tipoBarco.posiciones_finales[j].y = y2;
+                int x, y;
+                fscanf(file, "%d %d", &x, &y);
+                tipoBarco.posiciones[j].x = x;
+                tipoBarco.posiciones[j].y = y;
+
+                // Leer y almacenar las coordenadas intermedias
+                int num_intermedias = 0;
+                while (fscanf(file, ", %d %d", &x, &y) == 2) {
+                    tipoBarco.posiciones_intermedias[j][num_intermedias].x = x;
+                    tipoBarco.posiciones_intermedias[j][num_intermedias].y = y;
+                    num_intermedias++;
+                }
+
+                // Leer la coordenada final
+                fscanf(file, ", %d %d", &x, &y);
+                tipoBarco.posiciones_finales[j].x = x;
+                tipoBarco.posiciones_finales[j].y = y;
+
+                tipoBarco.num_intermedias[j] = num_intermedias;
             }
             tablero->tipos[tablero->num_tipos] = tipoBarco;
             tablero->num_tipos++;
@@ -79,14 +94,20 @@ void imprimirTablero(const Tablero* tablero) {
         printf("Barco: %s\n", tipoBarco.tipo);
         for (int j = 0; j < tipoBarco.num_barcos; j++) {
             Coordenada coordenada = tipoBarco.posiciones[j];
-            Coordenada coordenada_final = tipoBarco.posiciones_finales[j];
             printf("Posición inicial: %d, %d\n", coordenada.x, coordenada.y);
+
+            // Imprimir las coordenadas intermedias
+            for (int k = 0; k < tipoBarco.num_intermedias[j]-1; k++) {
+                Coordenada intermedia = tipoBarco.posiciones_intermedias[j][k];
+                printf("Coordenada intermedia: %d, %d\n", intermedia.x, intermedia.y);
+            }
+
+            Coordenada coordenada_final = tipoBarco.posiciones_finales[j];
             printf("Posición final: %d, %d\n", coordenada_final.x, coordenada_final.y);
         }
         printf("\n");
     }
 }
-
 
 
 void escribirDisparo(const char* archivo, const char* mensaje, int pid, int jugador) {
@@ -205,6 +226,7 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
                 Coordenada coordenada_inicial = tipo->posiciones[j];
                 Coordenada coordenada_final = tipo->posiciones_finales[j];
 
+                // Comprobar si la coordenada está entre las posiciones iniciales y finales
                 if ((coordenada.x >= coordenada_inicial.x && coordenada.x <= coordenada_final.x) &&
                     (coordenada.y >= coordenada_inicial.y && coordenada.y <= coordenada_final.y)) {
                     tipoBarco = tipo;
@@ -215,7 +237,22 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
                     }
                     break;
                 }
+
+                // Comprobar si la coordenada está en las posiciones intermedias
+                for (int k = 0; k < tipo->num_intermedias[j]; k++) {
+                    Coordenada coordenada_intermedia = tipo->posiciones_intermedias[j][k];
+                    if (coordenada.x == coordenada_intermedia.x && coordenada.y == coordenada_intermedia.y) {
+                        // La coordenada está en las posiciones intermedias, se considera acertado
+                        tipoBarco = tipo;
+                        break;
+                    }
+                }
+
+                if (tipoBarco) {
+                    break;
+                }
             }
+
             if (tipoBarco) {
                 break;
             }
@@ -244,6 +281,8 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
         sleep(tiempoEspera);
     }
 }
+
+
 
 int main() {
     Tablero tablero1;
