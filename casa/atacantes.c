@@ -89,7 +89,7 @@ void imprimirTablero(const Tablero* tablero) {
 
 
 
-void escribirDisparo(const char* archivo, const char* mensaje) {
+void escribirDisparo(const char* archivo, const char* mensaje, int pid, int jugador) {
     sem_t* semaforo = sem_open("/disparos_semaphore", O_CREAT, 0666, 1);
     if (semaforo == SEM_FAILED) {
         perror("Error al abrir el semáforo");
@@ -125,7 +125,7 @@ void escribirDisparo(const char* archivo, const char* mensaje) {
     lseek(fd, 0, SEEK_SET); // Mover el cursor al inicio del archivo
 
     char resultado_disparo[100];
-    sprintf(resultado_disparo, "%s\n", mensaje);
+    sprintf(resultado_disparo, "PID %d Jugador %d: %s\n", pid, jugador, mensaje);
 
     ssize_t bytesWritten = write(fd, resultado_disparo, strlen(resultado_disparo));
     if (bytesWritten == -1) {
@@ -160,7 +160,7 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
     Coordenada ultima_coordenada;
     ultima_coordenada.x = 0;
     ultima_coordenada.y = 0;
-
+    int pid = getpid();
     while (1) {
         int x, y;
         int disparo_aleatorio = 1;
@@ -225,15 +225,15 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
             printf("¡El jugador %d ha acertado en un barco del jugador %d! Coordenadas: %d, %d\n", jugador, oponente, coordenada.x, coordenada.y);
             ultima_direccion = 0; // Reiniciar la dirección
             char mensaje[50];
-            sprintf(mensaje, "Jugador %d: %d, %d : acertado\n", jugador, coordenada.x, coordenada.y);
-            escribirDisparo("disparos.txt", mensaje);
+            sprintf(mensaje, "%d, %d : acertado", coordenada.x, coordenada.y);
+            escribirDisparo("disparos.txt", mensaje, pid, jugador);
         } else {
             printf("El jugador %d ha disparado al agua. Coordenadas: %d, %d\n", jugador, coordenada.x, coordenada.y);
             if (disparo_aleatorio) {
                 ultima_direccion = 0; // Reiniciar la dirección si el disparo fue aleatorio
                 char mensaje[50];
-                sprintf(mensaje, "Jugador %d: %d, %d : fallado\n", jugador, coordenada.x, coordenada.y);
-                escribirDisparo("disparos.txt", mensaje);
+                sprintf(mensaje, "%d, %d : fallado", coordenada.x, coordenada.y);
+                escribirDisparo("disparos.txt", mensaje, pid, jugador);
             }
         }
 
@@ -242,8 +242,6 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
         // Esperar un tiempo aleatorio entre 0 y 10 segundos antes de realizar el siguiente disparo
         int tiempoEspera = rand() % 11;
         sleep(tiempoEspera);
-
-        
     }
 }
 
