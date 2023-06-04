@@ -13,6 +13,10 @@
 #define MIN_DIMENSION 5
 #define MAX_BARCOS 5
 
+#define AGUA 0
+#define TOCADO 1
+#define HUNDIDO 2
+
 typedef struct {
     int x;
     int y;
@@ -109,6 +113,14 @@ void imprimirTablero(const Tablero* tablero) {
     }
 }
 
+void reiniciarArchivo(const char* archivo) {
+    FILE* file = fopen(archivo, "w");
+    if (file == NULL) {
+        perror("Error al abrir el archivo");
+        return;
+    }
+    fclose(file);
+}
 
 void escribirDisparo(const char* archivo, const char* mensaje, int pid, int jugador) {
     sem_t* semaforo = sem_open("/disparos_semaphore", O_CREAT, 0666, 1);
@@ -285,6 +297,7 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
 
 
 int main() {
+    reiniciarArchivo("disparos.txt");
     Tablero tablero1;
     cargarTablero("tablero1.txt", &tablero1);
 
