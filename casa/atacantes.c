@@ -17,6 +17,12 @@
 #define TOCADO 1
 #define HUNDIDO 2
 
+#define DISPARO_INVALIDO -1
+#define DISPARO_AGUA 0
+#define DISPARO_ACERTADO 1
+#define DISPARO_REPETIDO 2
+#define DISPARO_HUNDIDO 3
+
 typedef struct {
     int x;
     int y;
@@ -27,9 +33,12 @@ typedef struct {
     Coordenada posiciones[MAX_BARCOS];
     Coordenada posiciones_intermedias[MAX_BARCOS][MAX_DIMENSION];
     Coordenada posiciones_finales[MAX_BARCOS];
-    int num_barcos;
+    int num_barcos; 
     int num_barcos_hundidos; // Número de barcos hundidos
     int num_intermedias[MAX_BARCOS]; // Número de coordenadas intermedias para cada barco
+    int estado[MAX_BARCOS];
+    int aciertos; // Nuevo campo para contar los aciertos en el barco
+    char nombre;
 } TipoBarco;
 
 typedef struct {
@@ -37,7 +46,24 @@ typedef struct {
     int num_tipos;
     int dimensionX;
     int dimensionY;
+    int num_disparos;
 } Tablero;
+
+typedef struct {
+    int pid;
+    Coordenada coordenada;
+} Disparo;
+
+typedef struct {
+    int estado[MAX_DIMENSION][MAX_DIMENSION];
+    Coordenada coordenadas[MAX_DIMENSION][MAX_DIMENSION];
+} Oponente;
+
+
+typedef struct {
+    Coordenada coordenadas[MAX_DIMENSION][MAX_DIMENSION];  // Coordenadas acertadas de los barcos
+    int num_aciertos[MAX_DIMENSION];  // Número de aciertos por cada barco
+} EstadoBarcos;
 
 void cargarTablero(const char* archivo, Tablero* tablero) {
     FILE* file = fopen(archivo, "r");
@@ -122,6 +148,24 @@ void reiniciarArchivo(const char* archivo) {
     fclose(file);
 }
 
+// Función para verificar si una coordenada ya ha sido disparada
+int coordenadaYaDisparada(const Tablero* tablero, Coordenada coordenada) {
+    for (int i = 0; i < tablero->num_tipos; i++) {
+        TipoBarco* tipo = &tablero->tipos[i];
+        for (int j = 0; j < tipo->num_barcos; j++) {
+            Coordenada coordenada_inicial = tipo->posiciones[j];
+            Coordenada coordenada_final = tipo->posiciones_finales[j];
+
+            // Comprobar si la coordenada coincide con alguna coordenada ya disparada
+            if ((coordenada.x >= coordenada_inicial.x && coordenada.x <= coordenada_final.x) &&
+                (coordenada.y >= coordenada_inicial.y && coordenada.y <= coordenada_final.y)) {
+                return 1;  // La coordenada ya ha sido disparada
+            }
+        }
+    }
+    return 0;  // La coordenada no ha sido disparada
+}
+
 void escribirDisparo(const char* archivo, const char* mensaje, int pid, int jugador) {
     sem_t* semaforo = sem_open("/disparos_semaphore", O_CREAT, 0666, 1);
     if (semaforo == SEM_FAILED) {
@@ -129,7 +173,7 @@ void escribirDisparo(const char* archivo, const char* mensaje, int pid, int juga
         return;
     }
 
-    int fd = open(archivo, O_RDWR | O_CREAT, 0666);
+    int fd = open(archivo, O_WRONLY | O_CREAT | O_APPEND, 0666);
     if (fd == -1) {
         perror("Error al abrir el archivo de disparos");
         sem_close(semaforo);
@@ -143,20 +187,6 @@ void escribirDisparo(const char* archivo, const char* mensaje, int pid, int juga
         return;
     }
 
-    char buffer[1024];
-    ssize_t bytesRead = read(fd, buffer, sizeof(buffer) - 1);
-    if (bytesRead == -1) {
-        perror("Error al leer el archivo de disparos");
-        sem_post(semaforo); // Desbloquear el semáforo
-        sem_close(semaforo);
-        close(fd);
-        return;
-    }
-
-    buffer[bytesRead] = '\0'; // Agregar el terminador de cadena
-
-    lseek(fd, 0, SEEK_SET); // Mover el cursor al inicio del archivo
-
     char resultado_disparo[100];
     sprintf(resultado_disparo, "PID %d Jugador %d: %s\n", pid, jugador, mensaje);
 
@@ -169,18 +199,85 @@ void escribirDisparo(const char* archivo, const char* mensaje, int pid, int juga
         return;
     }
 
-    bytesWritten = write(fd, buffer, strlen(buffer));
-    if (bytesWritten == -1) {
-        perror("Error al escribir en el archivo de disparos");
-        sem_post(semaforo); // Desbloquear el semáforo
-        sem_close(semaforo);
-        close(fd);
-        return;
-    }
-
     sem_post(semaforo); // Desbloquear el semáforo
     sem_close(semaforo);
     close(fd);
+}
+
+void inicializarEstadoBarcos(EstadoBarcos* estadoBarcos, const Tablero* tablero) {
+for (int i = 0; i < tablero->dimensionX; i++) {
+estadoBarcos->num_aciertos[i] = 0;
+for (int j = 0; j < tablero->dimensionY; j++) {
+estadoBarcos->coordenadas[i][j].x = -1;
+estadoBarcos->coordenadas[i][j].y = -1;
+}
+}
+}
+
+
+
+void actualizarEstadoBarcos(EstadoBarcos* estadoBarcos, const Tablero* tablero, int tipoBarco, int barco) {
+estadoBarcos->num_aciertos[barco]++;
+int num_aciertos = estadoBarcos->num_aciertos[barco];
+Coordenada posicion = tablero->tipos[tipoBarco].posiciones[barco];
+estadoBarcos->coordenadas[posicion.x][posicion.y].x = tipoBarco;
+estadoBarcos->coordenadas[posicion.x][posicion.y].y = num_aciertos;
+
+if (num_aciertos == tablero->tipos[tipoBarco].num_intermedias[barco] + 1) {
+    Coordenada posicion_final = tablero->tipos[tipoBarco].posiciones_finales[barco];
+    estadoBarcos->coordenadas[posicion_final.x][posicion_final.y].x = tipoBarco;
+    estadoBarcos->coordenadas[posicion_final.x][posicion_final.y].y = num_aciertos + 1;
+}
+}
+
+int validarDisparo(const Tablero* tablero, const Oponente* oponente, Coordenada disparo) {
+if (disparo.x < 0 || disparo.x >= tablero->dimensionX || disparo.y < 0 || disparo.y >= tablero->dimensionY) {
+return DISPARO_INVALIDO;
+}
+
+switch (oponente->estado[disparo.x][disparo.y]) {
+    case AGUA:
+        return DISPARO_AGUA;
+    case TOCADO:
+    case HUNDIDO:
+        return DISPARO_REPETIDO;
+    default:
+        return DISPARO_ACERTADO;
+}
+
+}
+
+int actualizarTableroOponente(Tablero* tablero, Oponente* oponente, Coordenada disparo) {
+int estado = oponente->estado[disparo.x][disparo.y];
+
+switch (estado) {
+    case AGUA:
+        oponente->estado[disparo.x][disparo.y] = TOCADO;
+        return DISPARO_AGUA;
+    case TOCADO:
+    case HUNDIDO:
+        return DISPARO_REPETIDO;
+    default:
+        oponente->estado[disparo.x][disparo.y] = HUNDIDO;
+        int tipoBarco = oponente->coordenadas[disparo.x][disparo.y].x;
+        int num_aciertos = oponente->coordenadas[disparo.x][disparo.y].y;
+        if (num_aciertos == tablero->tipos[tipoBarco].num_intermedias[disparo.y] + 1) {
+            return DISPARO_HUNDIDO;
+        } else {
+            return DISPARO_ACERTADO;
+        }
+}
+}
+
+void imprimirEstadoBarcos(const Tablero* tablero, const EstadoBarcos* estadoBarcos) {
+for (int i = 0; i < tablero->num_tipos; i++) {
+printf("Barco %d (%s):\n", i + 1, tablero->tipos[i].nombre);
+for (int j = 0; j < tablero->tipos[i].num_barcos; j++) {
+Coordenada posicion = tablero->tipos[i].posiciones[j];
+printf(" Posición %d: (%d, %d)\n", j + 1, posicion.x, posicion.y);
+}
+printf("\n");
+}
 }
 
 
@@ -238,29 +335,26 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
                 Coordenada coordenada_inicial = tipo->posiciones[j];
                 Coordenada coordenada_final = tipo->posiciones_finales[j];
 
-                // Comprobar si la coordenada está entre las posiciones iniciales y finales
-                if ((coordenada.x >= coordenada_inicial.x && coordenada.x <= coordenada_final.x) &&
-                    (coordenada.y >= coordenada_inicial.y && coordenada.y <= coordenada_final.y)) {
-                    tipoBarco = tipo;
-                    tipoBarco->num_barcos_hundidos++;
-                    if (tipoBarco->num_barcos_hundidos == tipoBarco->num_barcos) {
-                        barco_hundido = 1;
-                        printf("¡El jugador %d ha hundido un barco del jugador %d!\n", jugador, oponente);
-                    }
-                    break;
-                }
-
-                // Comprobar si la coordenada está en las posiciones intermedias
+                // Verificar si la coordenada está en las posiciones intermedias
+                int coordenada_encontrada = 0;
                 for (int k = 0; k < tipo->num_intermedias[j]; k++) {
                     Coordenada coordenada_intermedia = tipo->posiciones_intermedias[j][k];
                     if (coordenada.x == coordenada_intermedia.x && coordenada.y == coordenada_intermedia.y) {
-                        // La coordenada está en las posiciones intermedias, se considera acertado
-                        tipoBarco = tipo;
+                        coordenada_encontrada = 1;
                         break;
                     }
                 }
 
-                if (tipoBarco) {
+                if (coordenada.x == coordenada_inicial.x && coordenada.y == coordenada_inicial.y) {
+                    coordenada_encontrada = 1;
+                }
+
+                if (coordenada.x == coordenada_final.x && coordenada.y == coordenada_final.y) {
+                    coordenada_encontrada = 1;
+                }
+
+                if (coordenada_encontrada) {
+                    tipoBarco = tipo;
                     break;
                 }
             }
@@ -271,18 +365,45 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
         }
 
         if (tipoBarco) {
-            printf("¡El jugador %d ha acertado en un barco del jugador %d! Coordenadas: %d, %d\n", jugador, oponente, coordenada.x, coordenada.y);
+            printf("¡El jugador %d ha TOCADO en un barco del jugador %d! Coordenadas: %d, %d\n", jugador, oponente, coordenada.x, coordenada.y);
             ultima_direccion = 0; // Reiniciar la dirección
             char mensaje[50];
-            sprintf(mensaje, "%d, %d : acertado", coordenada.x, coordenada.y);
+            sprintf(mensaje, "%d, %d : TOCADO", coordenada.x, coordenada.y);
             escribirDisparo("disparos.txt", mensaje, pid, jugador);
+            ultima_coordenada = coordenada;
+            // Incrementar el contador de aciertos del barco
+            tipoBarco->aciertos++;
+
+            // Verificar si el barco ha sido hundido
+            if (tipoBarco->aciertos == tipoBarco->num_intermedias + 2) {
+
+                printf("¡El jugador %d ha HUNDIDO un barco del jugador %d!\n", jugador, oponente);
+                // Aquí puedes realizar las acciones necesarias cuando se hunde un barco, como actualizar la información del tablero, etc.
+            }
+
+            // Crear un objeto Disparo y almacenar la información del disparo
+            Disparo disparo;
+            disparo.pid = pid;
+            disparo.coordenada = coordenada;
+
+            // Realizar las acciones necesarias con el disparo, como registrar el disparo en una lista de disparos realizados
+            // y compartir la información del disparo con el oponente, si es necesario.
+
         } else {
-            printf("El jugador %d ha disparado al agua. Coordenadas: %d, %d\n", jugador, coordenada.x, coordenada.y);
+            printf("El jugador %d ha disparado al AGUA. Coordenadas: %d, %d\n", jugador, coordenada.x, coordenada.y);
             if (disparo_aleatorio) {
                 ultima_direccion = 0; // Reiniciar la dirección si el disparo fue aleatorio
                 char mensaje[50];
-                sprintf(mensaje, "%d, %d : fallado", coordenada.x, coordenada.y);
+                sprintf(mensaje, "%d, %d : AGUA", coordenada.x, coordenada.y);
                 escribirDisparo("disparos.txt", mensaje, pid, jugador);
+
+                // Crear un objeto Disparo y almacenar la información del disparo
+                Disparo disparo;
+                disparo.pid = pid;
+                disparo.coordenada = coordenada;
+
+                // Realizar las acciones necesarias con el disparo, como registrar el disparo en una lista de disparos realizados
+                // y compartir la información del disparo con el oponente, si es necesario.
             }
         }
 
@@ -298,11 +419,17 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
 
 int main() {
     reiniciarArchivo("disparos.txt");
+    
     Tablero tablero1;
+    EstadoBarcos estadoBarcos1;
+    inicializarEstadoBarcos(&estadoBarcos1, &tablero1);
     cargarTablero("tablero1.txt", &tablero1);
-
+    
     Tablero tablero2;
+    EstadoBarcos estadoBarcos2;
+    inicializarEstadoBarcos(&estadoBarcos2, &tablero2);
     cargarTablero("tablero2.txt", &tablero2);
+    
 
     printf("Tablero del jugador 1:\n");
     imprimirTablero(&tablero1);
