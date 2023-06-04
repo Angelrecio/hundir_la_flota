@@ -24,7 +24,7 @@ typedef struct {
 
 typedef struct {
     char tipo[20];
-    Coordenada** barcos;
+    Coordenada barcos[MAX_BARCOS][MAX_DIMENSION]; // Array de coordenadas para cada barco
     int num_barcos;
     int num_barcos_hundidos; // Número de barcos hundidos
 } Barco;
@@ -36,14 +36,18 @@ typedef struct {
     int dimensionY;
 } Tablero;
 
-vvoid cargarTablero(const char* archivo, Tablero* tablero) {
+void cargarTablero(const char* archivo, Tablero* tablero) {
     FILE* file = fopen(archivo, "r");
     if (file == NULL) {
-        printf("Error al abrir el archivo\n");
+        perror("Error al abrir el archivo");
         return;
     }
 
-    // ...
+    int dimensionX, dimensionY;
+    fscanf(file, "%d %d", &dimensionX, &dimensionY);
+    tablero->num_barcos = 0;
+    tablero->dimensionX = dimensionX;
+    tablero->dimensionY = dimensionY;
 
     while (!feof(file)) {
         Barco barco;
@@ -51,49 +55,37 @@ vvoid cargarTablero(const char* archivo, Tablero* tablero) {
         if (fscanf(file, "%s %d", barco.tipo, &num_barcos) != 2)
             break;
 
-        // ...
-
         if (num_barcos > 0) {
             barco.num_barcos = num_barcos;
             barco.num_barcos_hundidos = 0;
-            barco.barcos = malloc(num_barcos * sizeof(Coordenada*));
-
             for (int j = 0; j < num_barcos; j++) {
                 int x, y;
                 fscanf(file, "%d %d", &x, &y);
-                barco.barcos[j] = malloc(MAX_DIMENSION * sizeof(Coordenada));
-                int dimension = MAX_DIMENSION;
-
                 barco.barcos[j][0].x = x;
                 barco.barcos[j][0].y = y;
 
                 // Leer y almacenar las coordenadas intermedias
                 int num_intermedias = 0;
                 while (fscanf(file, ", %d %d", &x, &y) == 2) {
-                    if (num_intermedias + 1 >= dimension) {
-                        // Si se alcanza el límite de coordenadas, aumentar la dimensión
-                        dimension *= 2;
-                        barco.barcos[j] = realloc(barco.barcos[j], dimension * sizeof(Coordenada));
-                    }
                     barco.barcos[j][num_intermedias + 1].x = x;
                     barco.barcos[j][num_intermedias + 1].y = y;
                     num_intermedias++;
                 }
+
+                barco.barcos[j][num_intermedias + 1].x = x;
+                barco.barcos[j][num_intermedias + 1].y = y; // Coordenada final
+
+                barco.barcos[j][num_intermedias + 1].x = -1; // Marcar el final de las coordenadas
 
                 barco.num_barcos_hundidos++;
             }
             tablero->barcos[tablero->num_barcos] = barco;
             tablero->num_barcos++;
         }
-        // ...
     }
-
-    // ...
 
     fclose(file);
 }
-
-
 
 void imprimirTablero(const Tablero* tablero) {
     printf("Dimensiones del tablero: %d x %d\n", tablero->dimensionX, tablero->dimensionY);
@@ -105,20 +97,17 @@ void imprimirTablero(const Tablero* tablero) {
         printf("Número de barcos hundidos: %d\n", barco.num_barcos_hundidos);
         printf("Coordenadas de los barcos:\n");
         
-            // ...
-    for (int j = 0; j < barco.num_barcos; j++) {
-        printf("Barco %d: ", j + 1);
-        int k = 0;
-
-        while (k < MAX_DIMENSION && barco.barcos[j][k].x != -1) {
-            printf("(%d, %d) ", barco.barcos[j][k].x, barco.barcos[j][k].y);
-            k++;
+        for (int j = 0; j < barco.num_barcos; j++) {
+            printf("Barco %d: ", j + 1);
+            int k = 0;
+            
+            while (barco.barcos[j][k].x != -1) {
+                printf("(%d, %d) ", barco.barcos[j][k].x, barco.barcos[j][k].y);
+                k++;
+            }
+            
+            printf("\n");
         }
-
-        printf("\n");
-    }
-    // ...
-
         
         printf("\n");
     }
@@ -169,7 +158,7 @@ void escribirDisparo(const char* archivo, const char* mensaje, int pid, int juga
 
     lseek(fd, 0, SEEK_SET); // Mover el cursor al inicio del archivo
 
-    char resultado_disparo[256];
+    char resultado_disparo[100];
     sprintf(resultado_disparo, "PID %d Jugador %d: %s\n", pid, jugador, mensaje);
 
     ssize_t bytesWritten = write(fd, resultado_disparo, strlen(resultado_disparo));
@@ -249,18 +238,14 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
         for (int i = 0; i < tableroOponente->num_barcos; i++) {
             Barco barco = tableroOponente->barcos[i];
             for (int j = 0; j < barco.num_barcos; j++) {
-                Coordenada barco_posicion;
-                barco_posicion.x = barco.barcos[j]->x;
-barco_posicion.y = barco.barcos[j]->y;
-
+                Coordenada* barco_posicion = &barco.barcos[j];
 
                 // Comprobar si la coordenada coincide con la posición de un barco
-                if (coordenada.x == barco_posicion.x && coordenada.y == barco_posicion.y) {
+                if (coordenada.x == barco_posicion->x && coordenada.y == barco_posicion->y) {
                     tipo_barco_acertado = i;
                     barco.num_barcos_hundidos++;
                     if (barco.num_barcos_hundidos == barco.num_barcos) {
                         barco_hundido = 1;
-                        printf("¡El jugador %d ha hundido un barco del jugador %d!\n", jugador, oponente);
                     }
                     break;
                 }
@@ -275,8 +260,9 @@ barco_posicion.y = barco.barcos[j]->y;
             printf("¡El jugador %d ha acertado en un barco del jugador %d! Coordenadas: %d, %d\n", jugador, oponente, coordenada.x, coordenada.y);
             ultima_direccion = 0; // Reiniciar la dirección
             char mensaje[50];
-            snprintf(mensaje, sizeof(mensaje), "%d, %d : fallado", coordenada.x, coordenada.y);
+            sprintf(mensaje, "%d, %d : acertado", coordenada.x, coordenada.y);
             escribirDisparo("disparos.txt", mensaje, pid, jugador);
+            if(barco_hundido == 1){printf("¡El jugador %d ha hundido un barco del jugador %d!\n", jugador, oponente);}
         } else {
             printf("El jugador %d ha disparado al agua. Coordenadas: %d, %d\n", jugador, coordenada.x, coordenada.y);
             if (disparo_aleatorio) {
@@ -294,6 +280,7 @@ barco_posicion.y = barco.barcos[j]->y;
         sleep(tiempoEspera);
     }
 }
+
 
 
 
