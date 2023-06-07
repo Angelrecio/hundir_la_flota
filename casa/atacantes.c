@@ -64,6 +64,11 @@ typedef struct {
     Coordenada coordenadas[MAX_DIMENSION][MAX_DIMENSION];  // Coordenadas acertadas de los barcos
     int num_aciertos[MAX_DIMENSION];  // Número de aciertos por cada barco
 } EstadoBarcos;
+typedef struct {
+    Coordenada* elementos;
+    int capacidad;
+    int tamano;
+} ArrayCoordenadas;
 
 void cargarTablero(const char* archivo, Tablero* tablero) {
     FILE* file = fopen(archivo, "r");
@@ -229,22 +234,24 @@ if (num_aciertos == tablero->tipos[tipoBarco].num_intermedias[barco] + 1) {
     estadoBarcos->coordenadas[posicion_final.x][posicion_final.y].y = num_aciertos + 1;
 }
 }
-
-int validarDisparo(const Tablero* tablero, const Oponente* oponente, Coordenada disparo) {
-if (disparo.x < 0 || disparo.x >= tablero->dimensionX || disparo.y < 0 || disparo.y >= tablero->dimensionY) {
-return DISPARO_INVALIDO;
-}
-
-switch (oponente->estado[disparo.x][disparo.y]) {
-    case AGUA:
-        return DISPARO_AGUA;
-    case TOCADO:
-    case HUNDIDO:
-        return DISPARO_REPETIDO;
-    default:
-        return DISPARO_ACERTADO;
-}
-
+void agregarCoordenada(ArrayCoordenadas* array, Coordenada coordenada) {
+    if (array->tamano == array->capacidad) {
+        // Si el array está lleno, redimensionar el array
+        int nuevaCapacidad = array->capacidad * 2;
+        Coordenada* nuevosElementos = (Coordenada*)realloc(array->elementos, nuevaCapacidad * sizeof(Coordenada));
+        
+        if (nuevosElementos == NULL) {
+            printf("Error al asignar memoria.\n");
+            return;
+        }
+        
+        array->elementos = nuevosElementos;
+        array->capacidad = nuevaCapacidad;
+    }
+    
+    // Agregar la coordenada al final del array
+    array->elementos[array->tamano] = coordenada;
+    array->tamano++;
 }
 
 int actualizarTableroOponente(Tablero* tablero, Oponente* oponente, Coordenada disparo) {
@@ -279,10 +286,35 @@ printf(" Posición %d: (%d, %d)\n", j + 1, posicion.x, posicion.y);
 printf("\n");
 }
 }
-
+ArrayCoordenadas* crearArrayCoordenadas(int capacidadInicial) {
+    ArrayCoordenadas* array = (ArrayCoordenadas*)malloc(sizeof(ArrayCoordenadas));
+    if (array == NULL) {
+        printf("Error al asignar memoria.\n");
+        return NULL;
+    }
+    
+    array->elementos = (Coordenada*)malloc(capacidadInicial * sizeof(Coordenada));
+    if (array->elementos == NULL) {
+        printf("Error al asignar memoria.\n");
+        free(array);
+        return NULL;
+    }
+    
+    array->capacidad = capacidadInicial;
+    array->tamano = 0;
+    
+    return array;
+}
+void liberarArrayCoordenadas(ArrayCoordenadas* array) {
+    if (array != NULL) {
+        free(array->elementos);
+        free(array);
+    }
+}
 
 void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOponente) {
     srand(time(NULL) + jugador);  // Inicializar la semilla para generar números aleatorios
+    ArrayCoordenadas* array = crearArrayCoordenadas(1);
 
     int oponente = (jugador == 1) ? 2 : 1;  // Determinar el número del oponente
 
@@ -290,16 +322,30 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
     Coordenada ultima_coordenada;
     ultima_coordenada.x = 0;
     ultima_coordenada.y = 0;
+    int repetido= 0;
     int pid = getpid();
     while (1) {
         int x, y;
         int disparo_aleatorio = 1;
         int barco_hundido = 0;
+        while(disparo_aleatorio == 1){
+        disparo_aleatorio = 0;
 
         if (ultima_direccion == 0 || barco_hundido) {
             // Generar coordenadas de disparo aleatorias
             x = rand() % tableroOponente->dimensionX;
             y = rand() % tableroOponente->dimensionY;
+            Coordenada coordenada_provisional;
+            coordenada_provisional.x = x;
+            coordenada_provisional.y = y;
+            // Recorrer y añadir elementos al array
+            for (int i = 0; i < array->tamano; i++) {
+                Coordenada coordenada_array = array->elementos[i];
+                if(coordenada_provisional.x == coordenada_array.x && coordenada_provisional.y == coordenada_array.y){
+                    disparo_aleatorio = 1;
+                }
+
+            }
         } else {
             // Disparo en la dirección anterior
             x = ultima_coordenada.x;
@@ -319,13 +365,13 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
                 x = rand() % tableroOponente->dimensionX;
                 y = rand() % tableroOponente->dimensionY;
             }
-
-            disparo_aleatorio = 0;
-        }
+        }}
 
         Coordenada coordenada;
         coordenada.x = x;
         coordenada.y = y;
+        // Agregar coordenadas al array
+        agregarCoordenada(array, coordenada);
 
         TipoBarco* tipoBarco = NULL;
 
