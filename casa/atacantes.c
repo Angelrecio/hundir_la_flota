@@ -322,14 +322,14 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
     Coordenada ultima_coordenada;
     ultima_coordenada.x = 0;
     ultima_coordenada.y = 0;
-    int repetido= 0;
     int pid = getpid();
     while (1) {
         int x, y;
         int disparo_aleatorio = 1;
+        int disparidad = 1;
         int barco_hundido = 0;
-        while(disparo_aleatorio == 1){
-        disparo_aleatorio = 0;
+        while(disparidad == 1){
+        disparidad = 0;
 
         if (ultima_direccion == 0 || barco_hundido) {
             // Generar coordenadas de disparo aleatorias
@@ -342,7 +342,7 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
             for (int i = 0; i < array->tamano; i++) {
                 Coordenada coordenada_array = array->elementos[i];
                 if(coordenada_provisional.x == coordenada_array.x && coordenada_provisional.y == coordenada_array.y){
-                    disparo_aleatorio = 1;
+                    disparidad = 1;
                 }
 
             }
