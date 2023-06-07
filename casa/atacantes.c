@@ -311,6 +311,64 @@ void liberarArrayCoordenadas(ArrayCoordenadas* array) {
         free(array);
     }
 }
+void borrar_coordenada(int x, int y, const char* archivo_n) {
+    FILE* archivo = fopen(archivo_n, "r");
+    // Abre el archivo de texto en modo lectura
+    if (archivo == NULL) {
+        printf("Error al abrir el archivo.\n");
+        return;
+    }
+
+    // Crea un archivo temporal en modo escritura
+    FILE* archivo_temporal = fopen("temp.txt", "w");
+    if (archivo_temporal == NULL) {
+        printf("Error al abrir el archivo temporal.\n");
+        fclose(archivo);
+        return;
+    }
+
+    char linea[100];
+    int modificar_coordenadas = 0;
+
+    // Lee cada línea del archivo original
+    while (fgets(linea, sizeof(linea), archivo) != NULL) {
+        // Verifica si la línea contiene coordenadas
+        if (strstr(linea, ",") != NULL) {
+            modificar_coordenadas = 1;
+            char* token = strtok(linea, ",");
+            int omitir_linea = 0;
+
+            while (token != NULL) {
+                int coordenada_x, coordenada_y;
+                sscanf(token, "%d %d", &coordenada_x, &coordenada_y);
+
+                // Verifica si las coordenadas coinciden con las especificadas para borrar
+                if (coordenada_x == x && coordenada_y == y) {
+                    omitir_linea = 1;
+                    break;
+                }
+
+                token = strtok(NULL, ",");
+            }
+
+            if (!omitir_linea) {
+                fputs(linea, archivo_temporal);
+            }
+        } else {
+            // No es una línea de coordenadas, simplemente copia la línea al archivo temporal
+            fputs(linea, archivo_temporal);
+        }
+    }
+
+    fclose(archivo);
+    fclose(archivo_temporal);
+
+    // Renombra el archivo temporal al nombre del archivo original
+    remove(archivo_n);
+    rename("temp.txt", archivo_n);
+}
+
+
 
 void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOponente) {
     srand(time(NULL) + jugador);  // Inicializar la semilla para generar números aleatorios
@@ -416,6 +474,9 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
             char mensaje[50];
             sprintf(mensaje, "%d, %d : TOCADO", coordenada.x, coordenada.y);
             escribirDisparo("disparos.txt", mensaje, pid, jugador);
+            if(jugador == 1){borrar_coordenada(coordenada.x, coordenada.y,"tablero2.txt");}
+            else{borrar_coordenada(coordenada.x, coordenada.y,"tablero1.txt");}
+            
             ultima_coordenada = coordenada;
             // Incrementar el contador de aciertos del barco
             tipoBarco->aciertos++;
