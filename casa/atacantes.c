@@ -153,24 +153,6 @@ void reiniciarArchivo(const char* archivo) {
     fclose(file);
 }
 
-// Función para verificar si una coordenada ya ha sido disparada
-int coordenadaYaDisparada(const Tablero* tablero, Coordenada coordenada) {
-    for (int i = 0; i < tablero->num_tipos; i++) {
-        TipoBarco* tipo = &tablero->tipos[i];
-        for (int j = 0; j < tipo->num_barcos; j++) {
-            Coordenada coordenada_inicial = tipo->posiciones[j];
-            Coordenada coordenada_final = tipo->posiciones_finales[j];
-
-            // Comprobar si la coordenada coincide con alguna coordenada ya disparada
-            if ((coordenada.x >= coordenada_inicial.x && coordenada.x <= coordenada_final.x) &&
-                (coordenada.y >= coordenada_inicial.y && coordenada.y <= coordenada_final.y)) {
-                return 1;  // La coordenada ya ha sido disparada
-            }
-        }
-    }
-    return 0;  // La coordenada no ha sido disparada
-}
-
 void escribirDisparo(const char* archivo, const char* mensaje, int pid, int jugador) {
     sem_t* semaforo = sem_open("/disparos_semaphore", O_CREAT, 0666, 1);
     if (semaforo == SEM_FAILED) {
@@ -209,31 +191,6 @@ void escribirDisparo(const char* archivo, const char* mensaje, int pid, int juga
     close(fd);
 }
 
-void inicializarEstadoBarcos(EstadoBarcos* estadoBarcos, const Tablero* tablero) {
-for (int i = 0; i < tablero->dimensionX; i++) {
-estadoBarcos->num_aciertos[i] = 0;
-for (int j = 0; j < tablero->dimensionY; j++) {
-estadoBarcos->coordenadas[i][j].x = -1;
-estadoBarcos->coordenadas[i][j].y = -1;
-}
-}
-}
-
-
-
-void actualizarEstadoBarcos(EstadoBarcos* estadoBarcos, const Tablero* tablero, int tipoBarco, int barco) {
-estadoBarcos->num_aciertos[barco]++;
-int num_aciertos = estadoBarcos->num_aciertos[barco];
-Coordenada posicion = tablero->tipos[tipoBarco].posiciones[barco];
-estadoBarcos->coordenadas[posicion.x][posicion.y].x = tipoBarco;
-estadoBarcos->coordenadas[posicion.x][posicion.y].y = num_aciertos;
-
-if (num_aciertos == tablero->tipos[tipoBarco].num_intermedias[barco] + 1) {
-    Coordenada posicion_final = tablero->tipos[tipoBarco].posiciones_finales[barco];
-    estadoBarcos->coordenadas[posicion_final.x][posicion_final.y].x = tipoBarco;
-    estadoBarcos->coordenadas[posicion_final.x][posicion_final.y].y = num_aciertos + 1;
-}
-}
 void agregarCoordenada(ArrayCoordenadas* array, Coordenada coordenada) {
     if (array->tamano == array->capacidad) {
         // Si el array está lleno, redimensionar el array
@@ -254,63 +211,13 @@ void agregarCoordenada(ArrayCoordenadas* array, Coordenada coordenada) {
     array->tamano++;
 }
 
-int actualizarTableroOponente(Tablero* tablero, Oponente* oponente, Coordenada disparo) {
-int estado = oponente->estado[disparo.x][disparo.y];
-
-switch (estado) {
-    case AGUA:
-        oponente->estado[disparo.x][disparo.y] = TOCADO;
-        return DISPARO_AGUA;
-    case TOCADO:
-    case HUNDIDO:
-        return DISPARO_REPETIDO;
-    default:
-        oponente->estado[disparo.x][disparo.y] = HUNDIDO;
-        int tipoBarco = oponente->coordenadas[disparo.x][disparo.y].x;
-        int num_aciertos = oponente->coordenadas[disparo.x][disparo.y].y;
-        if (num_aciertos == tablero->tipos[tipoBarco].num_intermedias[disparo.y] + 1) {
-            return DISPARO_HUNDIDO;
-        } else {
-            return DISPARO_ACERTADO;
-        }
-}
-}
-
-void imprimirEstadoBarcos(const Tablero* tablero, const EstadoBarcos* estadoBarcos) {
-for (int i = 0; i < tablero->num_tipos; i++) {
-printf("Barco %d (%s):\n", i + 1, tablero->tipos[i].nombre);
-for (int j = 0; j < tablero->tipos[i].num_barcos; j++) {
-Coordenada posicion = tablero->tipos[i].posiciones[j];
-printf(" Posición %d: (%d, %d)\n", j + 1, posicion.x, posicion.y);
-}
-printf("\n");
-}
-}
-ArrayCoordenadas* crearArrayCoordenadas(int capacidadInicial) {
-    ArrayCoordenadas* array = (ArrayCoordenadas*)malloc(sizeof(ArrayCoordenadas));
-    if (array == NULL) {
-        printf("Error al asignar memoria.\n");
-        return NULL;
-    }
-    
-    array->elementos = (Coordenada*)malloc(capacidadInicial * sizeof(Coordenada));
-    if (array->elementos == NULL) {
-        printf("Error al asignar memoria.\n");
-        free(array);
-        return NULL;
-    }
-    
-    array->capacidad = capacidadInicial;
-    array->tamano = 0;
-    
-    return array;
-}
 void liberarArrayCoordenadas(ArrayCoordenadas* array) {
     if (array != NULL) {
         free(array->elementos);
         free(array);
     }
 }
+
 void borrar_coordenada(int x, int y, const char* archivo_n) {
     FILE* archivo = fopen(archivo_n, "r");
     // Abre el archivo de texto en modo lectura
@@ -368,7 +275,25 @@ void borrar_coordenada(int x, int y, const char* archivo_n) {
     rename("temp.txt", archivo_n);
 }
 
-
+ArrayCoordenadas* crearArrayCoordenadas(int capacidadInicial) {
+    ArrayCoordenadas* array = (ArrayCoordenadas*)malloc(sizeof(ArrayCoordenadas));
+    if (array == NULL) {
+        printf("Error al asignar memoria.\n");
+        return NULL;
+    }
+    
+    array->elementos = (Coordenada*)malloc(capacidadInicial * sizeof(Coordenada));
+    if (array->elementos == NULL) {
+        printf("Error al asignar memoria.\n");
+        free(array);
+        return NULL;
+    }
+    
+    array->capacidad = capacidadInicial;
+    array->tamano = 0;
+    
+    return array;
+}
 
 void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOponente) {
     srand(time(NULL) + jugador);  // Inicializar la semilla para generar números aleatorios
@@ -522,19 +447,15 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
     }
 }
 
-
-
 int main() {
     reiniciarArchivo("disparos.txt");
     
     Tablero tablero1;
     EstadoBarcos estadoBarcos1;
-    inicializarEstadoBarcos(&estadoBarcos1, &tablero1);
     cargarTablero("tablero1.txt", &tablero1);
     
     Tablero tablero2;
     EstadoBarcos estadoBarcos2;
-    inicializarEstadoBarcos(&estadoBarcos2, &tablero2);
     cargarTablero("tablero2.txt", &tablero2);
     
 
