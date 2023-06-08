@@ -11,7 +11,7 @@ typedef struct {
 
 } Coordenada;
 
-
+/*
 bool verificarSuperposicionBarcos(Coordenada* coordenadas, int numCoordenadas, Coordenada* barcosColocados, int numBarcosColocados) {
     for (int i = 0; i < numCoordenadas; i++) {
         for (int j = 0; j < numBarcosColocados; j++) {
@@ -30,7 +30,7 @@ bool verificarSuperposicionBarcos(Coordenada* coordenadas, int numCoordenadas, C
     }
     return false;
 }
-
+*/
 
 
 
@@ -57,7 +57,7 @@ void crearTablero(const char* archivo, int tableroNum) {
         return;
     }
 
-    fprintf(file, "%d %d\n", dimensionX, dimensionY);
+    fprintf(file, "%dx%d\n", dimensionX, dimensionY);
 
      Coordenada barcosColocados[MAX_BARCOS * 3];
 
@@ -96,11 +96,11 @@ void crearTablero(const char* archivo, int tableroNum) {
                                     break;
                                 }
 
-                                 if (verificarSuperposicionBarcos(coordenadas, k, posX + k, posY, tamBarco, barcosColocados, j)) {
+                                 /*if (verificarSuperposicionBarcos(coordenadas, k, posX + k, posY, tamBarco, barcosColocados, j)) {
                                     printf("Superposición de barcos. Introduce coordenadas válidas.\n");
                                     superposicion = true;
                                     break;
-                                }
+                                }*/
 
                                 coordenadas[k].x = posX + k;
                                 coordenadas[k].y = posY;
@@ -118,11 +118,11 @@ void crearTablero(const char* archivo, int tableroNum) {
                                     break;
                                 }
 
-                                if (verificarSuperposicionBarcos(coordenadas, k, posX + k, posY, tamBarco, barcosColocados, j)) {
+                                /*if (verificarSuperposicionBarcos(coordenadas, k, posX + k, posY, tamBarco, barcosColocados, j)) {
                                     printf("Superposición de barcos. Introduce coordenadas válidas.\n");
                                     superposicion = true;
                                     break;
-                                }
+                                }*/
 
                                 coordenadas[k].x = posX;
                                 coordenadas[k].y = posY + k;
@@ -171,11 +171,11 @@ void crearTablero(const char* archivo, int tableroNum) {
                                     break;
                                 }
 
-                                if (verificarSuperposicionBarcos(coordenadas, k, posX + k, posY, tamBarco, barcosColocados, j)) {
+                                /*if (verificarSuperposicionBarcos(coordenadas, k, posX + k, posY, tamBarco, barcosColocados, j)) {
                                     printf("Superposición de barcos. Introduce coordenadas válidas.\n");
                                     superposicion = true;
                                     break;
-                                }
+                                }*/
 
                                 coordenadas[k].x = posX + k;
                                 coordenadas[k].y = posY;
@@ -193,11 +193,11 @@ void crearTablero(const char* archivo, int tableroNum) {
                                     break;
                                 }
 
-                                if (verificarSuperposicionBarcos(coordenadas, k, posX + k, posY, tamBarco, barcosColocados, j)) {
+                                /*if (verificarSuperposicionBarcos(coordenadas, k, posX + k, posY, tamBarco, barcosColocados, j)) {
                                     printf("Superposición de barcos. Introduce coordenadas válidas.\n");
                                     superposicion = true;
                                     break;
-                                }
+                                }*/
 
                                 coordenadas[k].x = posX;
                                 coordenadas[k].y = posY + k;
@@ -250,11 +250,11 @@ void crearTablero(const char* archivo, int tableroNum) {
                                     break;
                                 }
 
-                                if (verificarSuperposicionBarcos(coordenadas, k, posX + k, posY, tamBarco, barcosColocados, j)) {
+                                /*if (verificarSuperposicionBarcos(coordenadas, k, posX + k, posY, tamBarco, barcosColocados, j)) {
                                     printf("Superposición de barcos. Introduce coordenadas válidas.\n");
                                     superposicion = true;
                                     break;
-                                }
+                                }*/
 
                                 coordenadas[k].x = posX + k;
                                 coordenadas[k].y = posY;
@@ -272,11 +272,11 @@ void crearTablero(const char* archivo, int tableroNum) {
                                     break;
                                 }
 
-                                if (verificarSuperposicionBarcos(coordenadas, k, posX + k, posY, tamBarco, barcosColocados, j)) {
+                               /* if (verificarSuperposicionBarcos(coordenadas, k, posX + k, posY, tamBarco, barcosColocados, j)) {
                                     printf("Superposición de barcos. Introduce coordenadas válidas.\n");
                                     superposicion = true;
                                     break;
-                                }
+                                }*/
 
                                 coordenadas[k].x = posX;
                                 coordenadas[k].y = posY + k;

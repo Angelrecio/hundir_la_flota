@@ -79,7 +79,7 @@ void cargarTablero(const char* archivo, Tablero* tablero) {
     }
 
     int dimensionX, dimensionY;
-    fscanf(file, "%d %d", &dimensionX, &dimensionY);
+    fscanf(file, "%dx%d", &dimensionX, &dimensionY);
     tablero->num_tipos = 0;
     tablero->dimensionX = dimensionX;
     tablero->dimensionY = dimensionY;
@@ -267,24 +267,20 @@ void liberarArrayCoordenadas(ArrayCoordenadas* array) {
         free(array);
     }
 }
-
 void borrar_coordenada(int x, int y, const char* archivo_n, int jugador) {
     FILE* archivo = fopen(archivo_n, "r");
-    // Abre el archivo de texto en modo lectura
     if (archivo == NULL) {
         printf("Error al abrir el archivo.\n");
         return;
     }
 
-    // Crea un archivo temporal en modo escritura
-    FILE *archivo_temporal = fopen("temp.txt", "w");
+    FILE* archivo_temporal = fopen("temp.txt", "w");
     if (archivo_temporal == NULL) {
         printf("Error al abrir el archivo temporal.\n");
         fclose(archivo);
         return;
     }
 
-    // Abre el archivo de coordenadas eliminadas en modo escritura
     FILE* archivo_elim_temporal = fopen("archivo_elim.txt", "a");
     if (archivo_elim_temporal == NULL) {
         printf("Error al abrir el archivo de coordenadas eliminadas.\n");
@@ -297,43 +293,44 @@ void borrar_coordenada(int x, int y, const char* archivo_n, int jugador) {
     int modificar_coordenadas = 0;
     int borrado = 0;
 
-    // Lee cada línea del archivo original
     while (fgets(linea, sizeof(linea), archivo) != NULL) {
-        // Verifica si la línea contiene coordenadas
-        if (strstr(linea, ",") != NULL) {
+        int coordenada_x, coordenada_y;
+        if (strstr(linea, ",") != NULL || sscanf(linea, "%*s %*s %d %d", &coordenada_x, &coordenada_y) >= 1) {
             modificar_coordenadas = 1;
-            char *token = strtok(linea, ",");
+            char* token = strtok(linea, ",");
+            int primera_coordenada = 1; // Flag para identificar la primera coordenada en la línea
             while (token != NULL) {
-                int coordenada_x, coordenada_y;
                 sscanf(token, "%d %d", &coordenada_x, &coordenada_y);
-                // Verifica si las coordenadas coinciden con las especificadas para borrar
                 if (coordenada_x == x && coordenada_y == y) {
-                    // Escribe las coordenadas eliminadas en el archivo de coordenadas eliminadas
                     fprintf(archivo_elim_temporal, "%d %d, ", coordenada_x, coordenada_y);
                     borrado = 1;
                 } else {
-                    // Escribe las coordenadas no borradas en el archivo temporal
-                    fprintf(archivo_temporal, "%d %d, ", coordenada_x, coordenada_y);
+                    if (!primera_coordenada) {
+                        fprintf(archivo_temporal, ", "); // Agrega coma y espacio antes de la coordenada
+                    } else {
+                        primera_coordenada = 0; // Desactiva el flag después de la primera coordenada
+                    }
+                    fprintf(archivo_temporal, "%d %d", coordenada_x, coordenada_y);
                 }
                 token = strtok(NULL, ",");
             }
-            fseek(archivo_temporal, -2, SEEK_CUR); // Elimina la última coma y espacio
-            fprintf(archivo_temporal, "\n"); // Agrega un salto de línea
+            fprintf(archivo_temporal, "\n");
+        } else if (sscanf(linea, "%d %d", &coordenada_x, &coordenada_y) == 2) {
+            if (coordenada_x == x && coordenada_y == y) {
+                fprintf(archivo_elim_temporal, "%d %d\n", coordenada_x, coordenada_y);
+                borrado = 1;
+            } else {
+                fputs(linea, archivo_temporal);
+            }
         } else {
-            // Copia las líneas que no contienen coordenadas directamente al archivo temporal
             fputs(linea, archivo_temporal);
         }
-    }
-
-    if (borrado) {
-        fprintf(archivo_temporal, "\n"); // Agrega un salto de línea al final del archivo temporal
     }
 
     fclose(archivo);
     fclose(archivo_temporal);
     fclose(archivo_elim_temporal);
 
-    // Renombra el archivo temporal al archivo original
     remove(archivo_n);
     rename("temp.txt", archivo_n);
 
