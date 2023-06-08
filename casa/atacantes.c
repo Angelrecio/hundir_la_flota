@@ -154,6 +154,24 @@ void reiniciarArchivo(const char* archivo) {
     fclose(file);
 }
 
+// Función para verificar si una coordenada ya ha sido disparada
+int coordenadaYaDisparada(const Tablero* tablero, Coordenada coordenada) {
+    for (int i = 0; i < tablero->num_tipos; i++) {
+        TipoBarco* tipo = &tablero->tipos[i];
+        for (int j = 0; j < tipo->num_barcos; j++) {
+            Coordenada coordenada_inicial = tipo->posiciones[j];
+            Coordenada coordenada_final = tipo->posiciones_finales[j];
+
+            // Comprobar si la coordenada coincide con alguna coordenada ya disparada
+            if ((coordenada.x >= coordenada_inicial.x && coordenada.x <= coordenada_final.x) &&
+                (coordenada.y >= coordenada_inicial.y && coordenada.y <= coordenada_final.y)) {
+                return 1;  // La coordenada ya ha sido disparada
+            }
+        }
+    }
+    return 0;  // La coordenada no ha sido disparada
+}
+
 void escribirDisparo(const char* archivo, const char* mensaje, int pid, int jugador) {
     sem_t* semaforo = sem_open("/disparos_semaphore", O_CREAT, 0666, 1);
     if (semaforo == SEM_FAILED) {
@@ -249,6 +267,7 @@ void liberarArrayCoordenadas(ArrayCoordenadas* array) {
         free(array);
     }
 }
+
 void borrar_coordenada(int x, int y, const char* archivo_n, int jugador) {
     FILE* archivo = fopen(archivo_n, "r");
     // Abre el archivo de texto en modo lectura
@@ -280,68 +299,51 @@ void borrar_coordenada(int x, int y, const char* archivo_n, int jugador) {
 
     // Lee cada línea del archivo original
     while (fgets(linea, sizeof(linea), archivo) != NULL) {
-        // Verifica si la línea contiene las coordenadas
-        int coordenada_x, coordenada_y;
-        if (sscanf(linea, "%d %d", &coordenada_x, &coordenada_y) == 2) {
-            // Verifica si las coordenadas coinciden con las especificadas para borrar
-            if (coordenada_x == x && coordenada_y == y) {
-                // Escribe las coordenadas eliminadas en el archivo de coordenadas eliminadas
-                fprintf(archivo_elim_temporal, "%d %d\n", coordenada_x, coordenada_y);
-                borrado = 1;
-                continue;  // Ignora esta línea y pasa a la siguiente
+        // Verifica si la línea contiene coordenadas
+        if (strstr(linea, ",") != NULL) {
+            modificar_coordenadas = 1;
+            char *token = strtok(linea, ",");
+            while (token != NULL) {
+                int coordenada_x, coordenada_y;
+                sscanf(token, "%d %d", &coordenada_x, &coordenada_y);
+                // Verifica si las coordenadas coinciden con las especificadas para borrar
+                if (coordenada_x == x && coordenada_y == y) {
+                    // Escribe las coordenadas eliminadas en el archivo de coordenadas eliminadas
+                    fprintf(archivo_elim_temporal, "%d %d, ", coordenada_x, coordenada_y);
+                    borrado = 1;
+                } else {
+                    // Escribe las coordenadas no borradas en el archivo temporal
+                    fprintf(archivo_temporal, "%d %d, ", coordenada_x, coordenada_y);
+                }
+                token = strtok(NULL, ",");
             }
+            fseek(archivo_temporal, -2, SEEK_CUR); // Elimina la última coma y espacio
+            fprintf(archivo_temporal, "\n"); // Agrega un salto de línea
+        } else {
+            // Copia las líneas que no contienen coordenadas directamente al archivo temporal
+            fputs(linea, archivo_temporal);
         }
+    }
 
-        // Copia las líneas que no contienen las coordenadas al archivo temporal
-        fputs(linea, archivo_temporal);
+    if (borrado) {
+        fprintf(archivo_temporal, "\n"); // Agrega un salto de línea al final del archivo temporal
     }
 
     fclose(archivo);
     fclose(archivo_temporal);
     fclose(archivo_elim_temporal);
 
-    if (borrado) {
-        // Reemplaza el archivo original con el archivo temporal
-        remove(archivo_n);
-        rename("temp.txt", archivo_n);
+    // Renombra el archivo temporal al archivo original
+    remove(archivo_n);
+    rename("temp.txt", archivo_n);
+
+    if (modificar_coordenadas) {
         printf("Coordenada eliminada exitosamente.\n");
     } else {
-        // Elimina el archivo temporal si no se encontraron las coordenadas
-        remove("temp.txt");
         printf("No se encontraron coordenadas para eliminar.\n");
     }
 }
 
-int verificarCoordenadasEliminadas(const Tablero* tablero, const TipoBarco* tipoBarco, const char* archivo_n) {
-    FILE* archivo = fopen(archivo_n, "r");
-    if (archivo == NULL) {
-        printf("Error al abrir el archivo del tablero.\n");
-        return 0;
-    }
-
-    char linea[100];
-
-    while (fgets(linea, sizeof(linea), archivo) != NULL) {
-        if (strstr(linea, tipoBarco->nombre) != NULL) {
-            char* token = strtok(linea, ",");
-            while (token != NULL) {
-                int coordenada_x, coordenada_y;
-                sscanf(token, "%d %d", &coordenada_x, &coordenada_y);
-                // Verificar si alguna coordenada del barco aún está presente en el archivo
-                for (int i = 0; i < tipoBarco->num_intermedias + 2; i++) {
-                    if (coordenada_x == tipoBarco->posiciones[i].x && coordenada_y == tipoBarco->posiciones[i].y) {
-                        fclose(archivo);
-                        return 0;  // Todavía hay una coordenada presente en el archivo
-                    }
-                }
-                token = strtok(NULL, ",");
-            }
-        }
-    }
-
-    fclose(archivo);
-    return 1;  // Todas las coordenadas del barco han sido eliminadas
-}
 
 
 void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOponente) {
@@ -461,25 +463,11 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
             tipoBarco->aciertos++;
 
             // Verificar si el barco ha sido hundido
-             if (tipoBarco->aciertos == tipoBarco->num_intermedias + 2) {
-                    // Verificar si todas las coordenadas del barco han sido eliminadas
-                    if(jugador == 1){
-                         int todas_coordenadas_eliminadas = verificarCoordenadasEliminadas(tableroOponente, tipoBarco, "tablero1.txt");
-                    if (todas_coordenadas_eliminadas) {
-                       printf("¡El jugador %d ha HUNDIDO un barco del jugador %d!\n", jugador, oponente);
-                        // Aquí puedes realizar las acciones necesarias cuando se hunde un barco, como actualizar la información del tablero, etc.
-                    }
-                    }
+            if (tipoBarco->aciertos == tipoBarco->num_intermedias + 2) {
 
-                    if(jugador == 2){
-                         int todas_coordenadas_eliminadas = verificarCoordenadasEliminadas(tableroOponente, tipoBarco, "tablero2.txt");
-                    if (todas_coordenadas_eliminadas) {
-                       printf("¡El jugador %d ha HUNDIDO un barco del jugador %d!\n", jugador, oponente);
-                        // Aquí puedes realizar las acciones necesarias cuando se hunde un barco, como actualizar la información del tablero, etc.
-                    }
-                    }
-                   
-             }
+                printf("¡El jugador %d ha HUNDIDO un barco del jugador %d!\n", jugador, oponente);
+                // Aquí puedes realizar las acciones necesarias cuando se hunde un barco, como actualizar la información del tablero, etc.
+            }
 
             // Crear un objeto Disparo y almacenar la información del disparo
             Disparo disparo;
