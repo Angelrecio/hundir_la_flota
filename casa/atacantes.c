@@ -39,6 +39,7 @@ typedef struct {
     int estado[MAX_BARCOS];
     int aciertos; // Nuevo campo para contar los aciertos en el barco
     char nombre;
+      int hundido;
 } TipoBarco;
 
 typedef struct {
@@ -153,6 +154,24 @@ void reiniciarArchivo(const char* archivo) {
     fclose(file);
 }
 
+// Función para verificar si una coordenada ya ha sido disparada
+int coordenadaYaDisparada(const Tablero* tablero, Coordenada coordenada) {
+    for (int i = 0; i < tablero->num_tipos; i++) {
+        TipoBarco* tipo = &tablero->tipos[i];
+        for (int j = 0; j < tipo->num_barcos; j++) {
+            Coordenada coordenada_inicial = tipo->posiciones[j];
+            Coordenada coordenada_final = tipo->posiciones_finales[j];
+
+            // Comprobar si la coordenada coincide con alguna coordenada ya disparada
+            if ((coordenada.x >= coordenada_inicial.x && coordenada.x <= coordenada_final.x) &&
+                (coordenada.y >= coordenada_inicial.y && coordenada.y <= coordenada_final.y)) {
+                return 1;  // La coordenada ya ha sido disparada
+            }
+        }
+    }
+    return 0;  // La coordenada no ha sido disparada
+}
+
 void escribirDisparo(const char* archivo, const char* mensaje, int pid, int jugador) {
     sem_t* semaforo = sem_open("/disparos_semaphore", O_CREAT, 0666, 1);
     if (semaforo == SEM_FAILED) {
@@ -211,68 +230,15 @@ void agregarCoordenada(ArrayCoordenadas* array, Coordenada coordenada) {
     array->tamano++;
 }
 
-void liberarArrayCoordenadas(ArrayCoordenadas* array) {
-    if (array != NULL) {
-        free(array->elementos);
-        free(array);
-    }
+void imprimirEstadoBarcos(const Tablero* tablero, const EstadoBarcos* estadoBarcos) {
+for (int i = 0; i < tablero->num_tipos; i++) {
+printf("Barco %d (%s):\n", i + 1, tablero->tipos[i].nombre);
+for (int j = 0; j < tablero->tipos[i].num_barcos; j++) {
+Coordenada posicion = tablero->tipos[i].posiciones[j];
+printf(" Posición %d: (%d, %d)\n", j + 1, posicion.x, posicion.y);
 }
-
-void borrar_coordenada(int x, int y, const char* archivo_n) {
-    FILE* archivo = fopen(archivo_n, "r");
-    // Abre el archivo de texto en modo lectura
-    if (archivo == NULL) {
-        printf("Error al abrir el archivo.\n");
-        return;
-    }
-
-    // Crea un archivo temporal en modo escritura
-    FILE* archivo_temporal = fopen("temp.txt", "w");
-    if (archivo_temporal == NULL) {
-        printf("Error al abrir el archivo temporal.\n");
-        fclose(archivo);
-        return;
-    }
-
-    char linea[100];
-    int modificar_coordenadas = 0;
-
-    // Lee cada línea del archivo original
-    while (fgets(linea, sizeof(linea), archivo) != NULL) {
-        // Verifica si la línea contiene coordenadas
-        if (strstr(linea, ",") != NULL) {
-            modificar_coordenadas = 1;
-            char* token = strtok(linea, ",");
-            int omitir_linea = 0;
-
-            while (token != NULL) {
-                int coordenada_x, coordenada_y;
-                sscanf(token, "%d %d", &coordenada_x, &coordenada_y);
-
-                // Verifica si las coordenadas coinciden con las especificadas para borrar
-                if (coordenada_x == x && coordenada_y == y) {
-                    omitir_linea = 1;
-                    break;
-                }
-
-                token = strtok(NULL, ",");
-            }
-
-            if (!omitir_linea) {
-                fputs(linea, archivo_temporal);
-            }
-        } else {
-            // No es una línea de coordenadas, simplemente copia la línea al archivo temporal
-            fputs(linea, archivo_temporal);
-        }
-    }
-
-    fclose(archivo);
-    fclose(archivo_temporal);
-
-    // Renombra el archivo temporal al nombre del archivo original
-    remove(archivo_n);
-    rename("temp.txt", archivo_n);
+printf("\n");
+}
 }
 
 ArrayCoordenadas* crearArrayCoordenadas(int capacidadInicial) {
@@ -294,6 +260,91 @@ ArrayCoordenadas* crearArrayCoordenadas(int capacidadInicial) {
     
     return array;
 }
+
+void liberarArrayCoordenadas(ArrayCoordenadas* array) {
+    if (array != NULL) {
+        free(array->elementos);
+        free(array);
+    }
+}
+
+void borrar_coordenada(int x, int y, const char* archivo_n, int jugador) {
+    FILE* archivo = fopen(archivo_n, "r");
+    // Abre el archivo de texto en modo lectura
+    if (archivo == NULL) {
+        printf("Error al abrir el archivo.\n");
+        return;
+    }
+
+    // Crea un archivo temporal en modo escritura
+    FILE *archivo_temporal = fopen("temp.txt", "w");
+    if (archivo_temporal == NULL) {
+        printf("Error al abrir el archivo temporal.\n");
+        fclose(archivo);
+        return;
+    }
+
+    // Abre el archivo de coordenadas eliminadas en modo escritura
+    FILE* archivo_elim_temporal = fopen("archivo_elim.txt", "a");
+    if (archivo_elim_temporal == NULL) {
+        printf("Error al abrir el archivo de coordenadas eliminadas.\n");
+        fclose(archivo);
+        fclose(archivo_temporal);
+        return;
+    }
+
+    char linea[100];
+    int modificar_coordenadas = 0;
+    int borrado = 0;
+
+    // Lee cada línea del archivo original
+    while (fgets(linea, sizeof(linea), archivo) != NULL) {
+        // Verifica si la línea contiene coordenadas
+        if (strstr(linea, ",") != NULL) {
+            modificar_coordenadas = 1;
+            char *token = strtok(linea, ",");
+            while (token != NULL) {
+                int coordenada_x, coordenada_y;
+                sscanf(token, "%d %d", &coordenada_x, &coordenada_y);
+                // Verifica si las coordenadas coinciden con las especificadas para borrar
+                if (coordenada_x == x && coordenada_y == y) {
+                    // Escribe las coordenadas eliminadas en el archivo de coordenadas eliminadas
+                    fprintf(archivo_elim_temporal, "%d %d, ", coordenada_x, coordenada_y);
+                    borrado = 1;
+                } else {
+                    // Escribe las coordenadas no borradas en el archivo temporal
+                    fprintf(archivo_temporal, "%d %d, ", coordenada_x, coordenada_y);
+                }
+                token = strtok(NULL, ",");
+            }
+            fseek(archivo_temporal, -2, SEEK_CUR); // Elimina la última coma y espacio
+            fprintf(archivo_temporal, "\n"); // Agrega un salto de línea
+        } else {
+            // Copia las líneas que no contienen coordenadas directamente al archivo temporal
+            fputs(linea, archivo_temporal);
+        }
+    }
+
+    if (borrado) {
+        fprintf(archivo_temporal, "\n"); // Agrega un salto de línea al final del archivo temporal
+    }
+
+    fclose(archivo);
+    fclose(archivo_temporal);
+    fclose(archivo_elim_temporal);
+
+    // Renombra el archivo temporal al archivo original
+    remove(archivo_n);
+    rename("temp.txt", archivo_n);
+
+    if (modificar_coordenadas) {
+        printf("Coordenada eliminada exitosamente.\n");
+    } else {
+        printf("No se encontraron coordenadas para eliminar.\n");
+    }
+}
+
+
 
 void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOponente) {
     srand(time(NULL) + jugador);  // Inicializar la semilla para generar números aleatorios
@@ -399,8 +450,13 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
             char mensaje[50];
             sprintf(mensaje, "%d, %d : TOCADO", coordenada.x, coordenada.y);
             escribirDisparo("disparos.txt", mensaje, pid, jugador);
-            if(jugador == 1){borrar_coordenada(coordenada.x, coordenada.y,"tablero2.txt");}
-            else{borrar_coordenada(coordenada.x, coordenada.y,"tablero1.txt");}
+            if(jugador == 1){
+                borrar_coordenada(coordenada.x, coordenada.y,"tablero2.txt", jugador);
+            }
+            if(jugador == 2){
+                borrar_coordenada(coordenada.x, coordenada.y,"tablero1.txt", jugador);
+            }
+            
             
             ultima_coordenada = coordenada;
             // Incrementar el contador de aciertos del barco
@@ -446,6 +502,8 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
         sleep(tiempoEspera);
     }
 }
+
+
 
 int main() {
     reiniciarArchivo("disparos.txt");
