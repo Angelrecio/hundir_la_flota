@@ -316,6 +316,7 @@ void borrar_coordenada(int x, int y, const char* archivo_n, int jugador) {
             }
             fprintf(archivo_temporal, "\n");
         } else if (sscanf(linea, "%d %d", &coordenada_x, &coordenada_y) == 2) {
+            modificar_coordenadas = 1;
             if (coordenada_x == x && coordenada_y == y) {
                 fprintf(archivo_elim_temporal, "%d %d\n", coordenada_x, coordenada_y);
                 borrado = 1;
