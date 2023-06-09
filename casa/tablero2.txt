@@ -1,8 +1,6 @@
 5x5
 Portaviones 1
-0 0, 1 0
 Bombarderos 1
-1 1, 2 1
 Fragatas 1
-0 2
+
  

@@ -48,6 +48,7 @@ typedef struct {
     int dimensionX;
     int dimensionY;
     int num_disparos;
+    
 } Tablero;
 
 typedef struct {
@@ -363,7 +364,10 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
     ultima_coordenada.x = 0;
     ultima_coordenada.y = 0;
     int pid = getpid();
-    while (1) {
+    int contador_disparos = 0;
+    int salir=1;
+    
+    while (salir==1) {
         int x, y;
         int disparo_aleatorio = 1;
         int disparidad = 1;
@@ -451,6 +455,7 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
         }
 
         if (tipoBarco) {
+            
             printf("¡El jugador %d ha TOCADO en un barco del jugador %d! Coordenadas: %d, %d\n", jugador, oponente, coordenada.x, coordenada.y);
             ultima_direccion = 0; // Reiniciar la dirección
             char mensaje[50];
@@ -458,9 +463,28 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
             escribirDisparo("disparos.txt", mensaje, pid, jugador);
             if(jugador == 1){
                 borrar_coordenada(coordenada.x, coordenada.y,"tablero2.txt", jugador);
+
+                // Verificar si se han disparado todas las coordenadas
+
+                if (coordenada.x == NULL && coordenada.y == NULL) {
+                    printf("GAME OVER. GANA 2 Todas las coordenadas del tablero del jugador %d han sido disparadas.\n", jugador);
+                    salir=0;  // Salir del bucle while si se han disparado todas las coordenadas
+                      // Salir del bucle while si se han disparado todas las coordenadas
+                }
+
             }
             if(jugador == 2){
                 borrar_coordenada(coordenada.x, coordenada.y,"tablero1.txt", jugador);
+                contador_disparos++;  // Incrementar el contador de disparos
+
+                // Verificar si se han disparado todas las coordenadas
+
+                 if (coordenada.x == NULL && coordenada.y == NULL) {
+                    printf("GAME OVER. GANA 1 Todas las coordenadas del tablero del jugador %d han sido disparadas.\n", jugador);
+                      // Salir del bucle while si se han disparado todas las coordenadas
+                      salir=0;  // Salir del bucle while si se han disparado todas las coordenadas
+                }
+
             }
             
             
@@ -471,9 +495,10 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
             Disparo disparo;
             disparo.pid = pid;
             disparo.coordenada = coordenada;
-
+            
             // Realizar las acciones necesarias con el disparo, como registrar el disparo en una lista de disparos realizados
             // y compartir la información del disparo con el oponente, si es necesario.
+            
 
         } else {
             printf("El jugador %d ha disparado al AGUA. Coordenadas: %d, %d\n", jugador, coordenada.x, coordenada.y);
