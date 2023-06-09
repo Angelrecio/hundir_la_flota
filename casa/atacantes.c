@@ -230,17 +230,6 @@ void agregarCoordenada(ArrayCoordenadas* array, Coordenada coordenada) {
     array->tamano++;
 }
 
-void imprimirEstadoBarcos(const Tablero* tablero, const EstadoBarcos* estadoBarcos) {
-for (int i = 0; i < tablero->num_tipos; i++) {
-printf("Barco %d (%s):\n", i + 1, tablero->tipos[i].nombre);
-for (int j = 0; j < tablero->tipos[i].num_barcos; j++) {
-Coordenada posicion = tablero->tipos[i].posiciones[j];
-printf(" Posición %d: (%d, %d)\n", j + 1, posicion.x, posicion.y);
-}
-printf("\n");
-}
-}
-
 ArrayCoordenadas* crearArrayCoordenadas(int capacidadInicial) {
     ArrayCoordenadas* array = (ArrayCoordenadas*)malloc(sizeof(ArrayCoordenadas));
     if (array == NULL) {
@@ -267,6 +256,7 @@ void liberarArrayCoordenadas(ArrayCoordenadas* array) {
         free(array);
     }
 }
+
 void borrar_coordenada(int x, int y, const char* archivo_n, int jugador) {
     FILE* archivo = fopen(archivo_n, "r");
     if (archivo == NULL) {
@@ -292,13 +282,16 @@ void borrar_coordenada(int x, int y, const char* archivo_n, int jugador) {
     char linea[100];
     int modificar_coordenadas = 0;
     int borrado = 0;
+    int barco_hundido = 0; // Variable para controlar si el barco está hundido
 
     while (fgets(linea, sizeof(linea), archivo) != NULL) {
         int coordenada_x, coordenada_y;
         if (strstr(linea, ",") != NULL || sscanf(linea, "%*s %*s %d %d", &coordenada_x, &coordenada_y) >= 1) {
+            // Coordenadas de un barco
             modificar_coordenadas = 1;
             char* token = strtok(linea, ",");
             int primera_coordenada = 1; // Flag para identificar la primera coordenada en la línea
+            int todas_coordenadas_eliminadas = 1; // Variable para controlar si se eliminaron todas las coordenadas del barco
             while (token != NULL) {
                 sscanf(token, "%d %d", &coordenada_x, &coordenada_y);
                 if (coordenada_x == x && coordenada_y == y) {
@@ -311,19 +304,27 @@ void borrar_coordenada(int x, int y, const char* archivo_n, int jugador) {
                         primera_coordenada = 0; // Desactiva el flag después de la primera coordenada
                     }
                     fprintf(archivo_temporal, "%d %d", coordenada_x, coordenada_y);
+                    todas_coordenadas_eliminadas = 0; // Aún hay coordenadas del barco sin eliminar
                 }
                 token = strtok(NULL, ",");
             }
             fprintf(archivo_temporal, "\n");
+
+            if (todas_coordenadas_eliminadas && !barco_hundido) {
+                barco_hundido = 1; // El barco está hundido si se eliminaron todas sus coordenadas
+            }
         } else if (sscanf(linea, "%d %d", &coordenada_x, &coordenada_y) == 2) {
+            // Coordenada individual
             modificar_coordenadas = 1;
             if (coordenada_x == x && coordenada_y == y) {
                 fprintf(archivo_elim_temporal, "%d %d\n", coordenada_x, coordenada_y);
                 borrado = 1;
+                barco_hundido = 1; // El barco está hundido si se eliminó su única coordenada
             } else {
                 fputs(linea, archivo_temporal);
             }
         } else {
+            // Otra línea de texto
             fputs(linea, archivo_temporal);
         }
     }
@@ -336,7 +337,14 @@ void borrar_coordenada(int x, int y, const char* archivo_n, int jugador) {
     rename("temp.txt", archivo_n);
 
     if (modificar_coordenadas) {
-        printf("Coordenada eliminada exitosamente.\n");
+        if (borrado) {
+            printf("Coordenada eliminada exitosamente.\n");
+            if (barco_hundido) {
+                printf("¡El jugador %d ha HUNDIDO un barco del oponente!\n", jugador);
+            }
+        } else {
+            printf("No se encontraron coordenadas para eliminar.\n");
+        }
     } else {
         printf("No se encontraron coordenadas para eliminar.\n");
     }
@@ -457,15 +465,7 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
             
             
             ultima_coordenada = coordenada;
-            // Incrementar el contador de aciertos del barco
-            tipoBarco->aciertos++;
-
-            // Verificar si el barco ha sido hundido
-            if (tipoBarco->aciertos == tipoBarco->num_intermedias + 2) {
-
-                printf("¡El jugador %d ha HUNDIDO un barco del jugador %d!\n", jugador, oponente);
-                // Aquí puedes realizar las acciones necesarias cuando se hunde un barco, como actualizar la información del tablero, etc.
-            }
+            
 
             // Crear un objeto Disparo y almacenar la información del disparo
             Disparo disparo;
