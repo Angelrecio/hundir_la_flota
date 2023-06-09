@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <semaphore.h>
 #include <sys/stat.h>
+#include <stdbool.h>
 
 #define MAX_DIMENSION 10
 #define MIN_DIMENSION 5
@@ -173,43 +174,7 @@ int coordenadaYaDisparada(const Tablero* tablero, Coordenada coordenada) {
     return 0;  // La coordenada no ha sido disparada
 }
 
-void escribirDisparo(const char* archivo, const char* mensaje, int pid, int jugador) {
-    sem_t* semaforo = sem_open("/disparos_semaphore", O_CREAT, 0666, 1);
-    if (semaforo == SEM_FAILED) {
-        perror("Error al abrir el semáforo");
-        return;
-    }
 
-    int fd = open(archivo, O_WRONLY | O_CREAT | O_APPEND, 0666);
-    if (fd == -1) {
-        perror("Error al abrir el archivo de disparos");
-        sem_close(semaforo);
-        return;
-    }
-
-    if (sem_wait(semaforo) == -1) { // Bloquear el semáforo
-        perror("Error al bloquear el semáforo");
-        close(fd);
-        sem_close(semaforo);
-        return;
-    }
-
-    char resultado_disparo[100];
-    sprintf(resultado_disparo, "PID %d Jugador %d: %s\n", pid, jugador, mensaje);
-
-    ssize_t bytesWritten = write(fd, resultado_disparo, strlen(resultado_disparo));
-    if (bytesWritten == -1) {
-        perror("Error al escribir en el archivo de disparos");
-        sem_post(semaforo); // Desbloquear el semáforo
-        sem_close(semaforo);
-        close(fd);
-        return;
-    }
-
-    sem_post(semaforo); // Desbloquear el semáforo
-    sem_close(semaforo);
-    close(fd);
-}
 
 void agregarCoordenada(ArrayCoordenadas* array, Coordenada coordenada) {
     if (array->tamano == array->capacidad) {
@@ -414,35 +379,146 @@ void crearArchivoBatalla(const char* nombreArchivo, int pidHijo1, int pidHijo2) 
     printf("Se creó el archivo copia %s.\n", nombreArchivoCopia);
 }
 
-//Hazme una funcion que escriba en disparos.txt el pid del PERDEDOR y GAME OVER
-void escribirGameOver(const char* nombreArchivo, int pidPerdedor) {
-    // Abre el archivo en modo escritura
-    FILE* archivo = fopen(nombreArchivo, "w");
+bool buscarWinsEnArchivo(const char* nombreArchivo) {
+    FILE* archivo = fopen(nombreArchivo, "r");
     if (archivo == NULL) {
-        printf("Error al abrir el archivo.\n");
-        return;
+        printf("No se pudo abrir el archivo.\n");
+        return false;
     }
-    // Escribe el pid del perdedor y GAME OVER
-    fprintf(archivo, "PID %d GAME OVER", pidPerdedor);
-    // Cierra el archivo
+
+    char linea[256];
+    while (fgets(linea, sizeof(linea), archivo)) {
+        if (strstr(linea, "WINS!") != NULL) {
+            fclose(archivo);
+            
+            return true;
+        }
+    }
+    
+
     fclose(archivo);
-    printf("Se escribió el pid del perdedor y GAME OVER en el archivo %s.\n", nombreArchivo);
+        return false;
 }
 
-//Hazme una funcion que escriba en disparos.txt el pid del GANADOR y WINS!
-void escribirWins(const char* nombreArchivo, int pidGanador) {
-    // Abre el archivo en modo escritura
-    FILE* archivo = fopen(nombreArchivo, "w");
-    if (archivo == NULL) {
-        printf("Error al abrir el archivo.\n");
+void escribirDisparo(const char* archivo, const char* mensaje, int pid, int jugador) {
+    sem_t* semaforo = sem_open("/disparos_semaphore", O_CREAT, 0666, 1);
+    if (semaforo == SEM_FAILED) {
+        perror("Error al abrir el semáforo");
         return;
     }
-    // Escribe el pid del ganador y WINS!
-    fprintf(archivo, "PID %d WINS!", pidGanador);
-    // Cierra el archivo
-    fclose(archivo);
-    printf("Se escribió el pid del ganador y WINS! en el archivo %s.\n", nombreArchivo);
+
+    int fd = open(archivo, O_WRONLY | O_CREAT | O_APPEND, 0666);
+    if (fd == -1) {
+        perror("Error al abrir el archivo de disparos");
+        sem_close(semaforo);
+        return;
+    }
+
+    if (sem_wait(semaforo) == -1) { // Bloquear el semáforo
+        perror("Error al bloquear el semáforo");
+        close(fd);
+        sem_close(semaforo);
+        return;
+    }
+
+    char resultado_disparo[100];
+    sprintf(resultado_disparo, "PID %d Jugador %d: %s\n", pid, jugador, mensaje);
+
+    ssize_t bytesWritten = write(fd, resultado_disparo, strlen(resultado_disparo));
+    if (bytesWritten == -1) {
+        perror("Error al escribir en el archivo de disparos");
+        sem_post(semaforo); // Desbloquear el semáforo
+        sem_close(semaforo);
+        close(fd);
+        return;
+    }
+
+    sem_post(semaforo); // Desbloquear el semáforo
+    sem_close(semaforo);
+    close(fd);
 }
+
+//hazme una funcion que escriba en disparos.txt con semaforos Pid del jugador ganador y WINS!
+void escribirWins(const char* archivo, int pid, int jugador) {
+    sem_t* semaforo = sem_open("/disparos_semaphore", O_CREAT, 0666, 1);
+    if (semaforo == SEM_FAILED) {
+        perror("Error al abrir el semáforo");
+        return;
+    }
+
+    int fd = open(archivo, O_WRONLY | O_CREAT | O_APPEND, 0666);
+    if (fd == -1) {
+        perror("Error al abrir el archivo de disparos");
+        sem_close(semaforo);
+        return;
+    }
+
+    if (sem_wait(semaforo) == -1) { // Bloquear el semáforo
+        perror("Error al bloquear el semáforo");
+        close(fd);
+        sem_close(semaforo);
+        return;
+    }
+
+    char resultado_disparo[100];
+    sprintf(resultado_disparo, "PID %d Jugador %d: WINS!\n", pid, jugador);
+    printf("Jugador %d WINS!\n", jugador);
+
+    ssize_t bytesWritten = write(fd, resultado_disparo, strlen(resultado_disparo));
+    if (bytesWritten == -1) {
+        perror("Error al escribir en el archivo de disparos");
+        sem_post(semaforo); // Desbloquear el semáforo
+        sem_close(semaforo);
+        close(fd);
+        return;
+    }
+
+    sem_post(semaforo); // Desbloquear el semáforo
+    sem_close(semaforo);
+    close(fd);
+}
+
+//hazme una funcion que escriba en disparos.txt con semaforos Pid del jugador perdedor y GAME OVER
+void escribirGameOver(const char* archivo, int pid, int jugador) {
+    sem_t* semaforo = sem_open("/disparos_semaphore", O_CREAT, 0666, 1);
+    if (semaforo == SEM_FAILED) {
+        perror("Error al abrir el semáforo");
+        return;
+    }
+
+    int fd = open(archivo, O_WRONLY | O_CREAT | O_APPEND, 0666);
+    if (fd == -1) {
+        perror("Error al abrir el archivo de disparos");
+        sem_close(semaforo);
+        return;
+    }
+
+    if (sem_wait(semaforo) == -1) { // Bloquear el semáforo
+        perror("Error al bloquear el semáforo");
+        close(fd);
+        sem_close(semaforo);
+        return;
+    }
+
+    char resultado_disparo[100];
+    sprintf(resultado_disparo, "PID %d GAME OVER\n", pid);
+    printf("GAME OVER\n");
+
+    ssize_t bytesWritten = write(fd, resultado_disparo, strlen(resultado_disparo));
+    if (bytesWritten == -1) {
+        perror("Error al escribir en el archivo de disparos");
+        sem_post(semaforo); // Desbloquear el semáforo
+        sem_close(semaforo);
+        close(fd);
+        return;
+    }
+
+    sem_post(semaforo); // Desbloquear el semáforo
+    sem_close(semaforo);
+    close(fd);
+}
+
+
 
 void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOponente) {
     srand(time(NULL) + jugador);  // Inicializar la semilla para generar números aleatorios
@@ -462,6 +538,12 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
         int disparo_aleatorio = 1;
         int disparidad = 1;
         int barco_hundido = 0;
+        if(buscarWinsEnArchivo("disparos.txt")){
+            break;
+        }
+        else{
+
+        }
         while (disparidad == 1) {
             disparidad = 0;
 
@@ -554,7 +636,10 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
             if (jugador == 1) {
                 borrar_coordenada(coordenada.x, coordenada.y, "tablero2.txt", jugador);
                 if (cuantasCoordenadasQuedan("tablero2.txt")==0) {
-                printf("GAME OVER. GANA 1 Todas las coordenadas del tablero del jugador %d han sido disparadas.\n", oponente);
+                printf("GAME OVER. Todas las coordenadas del tablero del jugador %d han sido disparadas.\n", oponente);
+                
+                escribirGameOver("disparos.txt", getppid, oponente);
+                escribirWins("disparos.txt", pid, jugador);
                 //llama al pid del jugador 2 para que termine
                 
 
@@ -565,7 +650,9 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
             } else if (jugador == 2) {
                 borrar_coordenada(coordenada.x, coordenada.y, "tablero1.txt", jugador);
                 if (cuantasCoordenadasQuedan("tablero1.txt")==0) {
-                printf("GAME OVER. GANA 2 Todas las coordenadas del tablero del jugador %d han sido disparadas.\n", oponente);
+                printf("GAME OVER. Todas las coordenadas del tablero del jugador %d han sido disparadas.\n", oponente);
+                escribirGameOver("disparos.txt", getppid, oponente);
+                escribirWins("disparos.txt", pid, jugador);
                 
             
                 ///salir del bucle while si ya no quedan mas coordenadas
@@ -618,6 +705,7 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
 
 
 int main() {
+    
     reiniciarArchivo("disparos.txt");
     reiniciarArchivo("archivo_elim.txt");
 
