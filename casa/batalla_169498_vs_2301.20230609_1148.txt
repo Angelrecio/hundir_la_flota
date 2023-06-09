@@ -1,0 +1,15 @@
+PID 169499 Jugador 1: 0, 2 : AGUA
+PID 169500 Jugador 2: 3, 1 : AGUA
+PID 169499 Jugador 1: 3, 3 : AGUA
+PID 169500 Jugador 2: 0, 0 : AGUA
+PID 169499 Jugador 1: 3, 0 : AGUA
+PID 169499 Jugador 1: 2, 1 : AGUA
+PID 169500 Jugador 2: 1, 1 : AGUA
+PID 169500 Jugador 2: 0, 2 : AGUA
+PID 169499 Jugador 1: 1, 1 : TOCADO
+PID 169499 Jugador 1: PID %d Jugador %d GAME OVER
+PID 169499 Jugador 1: PID %d Jugador %d WINS!
+PID 169500 Jugador 2: 3, 4 : AGUA
+PID 169500 Jugador 2: 1, 2 : TOCADO
+PID 169500 Jugador 2: PID %d Jugador %d GAME OVER
+PID 169500 Jugador 2: PID %d Jugador %d WINS!

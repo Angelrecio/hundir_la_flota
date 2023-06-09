@@ -352,6 +352,97 @@ void borrar_coordenada(int x, int y, const char* archivo_n, int jugador) {
 }
 
 
+int cuantasCoordenadasQuedan(const char* nombreArchivo) {
+    // Abre el archivo en modo lectura
+    FILE* archivo = fopen(nombreArchivo, "r");
+    if (archivo == NULL) {
+        printf("Error al abrir el archivo.\n");
+        return -1;
+    }
+    // Cuenta las coordenadas
+    int contador = 0;
+    char linea[100];
+    while (fgets(linea, sizeof(linea), archivo) != NULL) {
+        int coordenada_x, coordenada_y;
+        if (strstr(linea, ",") != NULL || sscanf(linea, "%*s %*s %d %d", &coordenada_x, &coordenada_y) >= 1) {
+            // Coordenadas de un barco
+            char* token = strtok(linea, ",");
+            while (token != NULL) {
+                contador++;
+                token = strtok(NULL, ",");
+            }
+        } else if (sscanf(linea, "%d %d", &coordenada_x, &coordenada_y) == 2) {
+            // Coordenada individual
+            contador++;
+        }
+    }
+    // Cierra el archivo
+    printf("Quedan %d coordenadas.\n", contador);
+    fclose(archivo);
+    return contador;
+    
+}
+    
+//Hazme una funcion que cree un archivo copia a disparos.txt pero que el nombre del archivo sea "batalla " + PID_HIJO1 + " vs " + PID_HIJO2 + "." + AAAAMMDD_HHmm + ".txt" donde la cadena AAAAMMDD_HHmm será la fecha de inicio de la batalla, en formato año (AAAA), mes (MM), dia(DD), hora(HH) y minuto(MM)
+void crearArchivoBatalla(const char* nombreArchivo, int pidHijo1, int pidHijo2) {
+    // Abre el archivo en modo lectura
+    FILE* archivo = fopen(nombreArchivo, "r");
+    if (archivo == NULL) {
+        printf("Error al abrir el archivo.\n");
+        return;
+    }
+    // Crea el archivo copia
+    char nombreArchivoCopia[100];
+    char fecha[100];
+    time_t tiempo = time(NULL);
+    struct tm* fechaHora = localtime(&tiempo);
+    strftime(fecha, sizeof(fecha), "%Y%m%d_%H%M", fechaHora);
+    sprintf(nombreArchivoCopia, "batalla_%d_vs_%d.%s.txt", getpid(), getppid(), fecha);
+    FILE* archivoCopia = fopen(nombreArchivoCopia, "w");
+    if (archivoCopia == NULL) {
+        printf("Error al crear el archivo copia.\n");
+        return;
+    }
+    // Copia el contenido del archivo original al archivo copia
+    char linea[100];
+    while (fgets(linea, sizeof(linea), archivo) != NULL) {
+        fputs(linea, archivoCopia);
+    }
+    // Cierra los archivos
+    fclose(archivo);
+    fclose(archivoCopia);
+    printf("Se creó el archivo copia %s.\n", nombreArchivoCopia);
+}
+
+//Hazme una funcion que escriba en disparos.txt el pid del PERDEDOR y GAME OVER
+void escribirGameOver(const char* nombreArchivo, int pidPerdedor) {
+    // Abre el archivo en modo escritura
+    FILE* archivo = fopen(nombreArchivo, "w");
+    if (archivo == NULL) {
+        printf("Error al abrir el archivo.\n");
+        return;
+    }
+    // Escribe el pid del perdedor y GAME OVER
+    fprintf(archivo, "PID %d GAME OVER", pidPerdedor);
+    // Cierra el archivo
+    fclose(archivo);
+    printf("Se escribió el pid del perdedor y GAME OVER en el archivo %s.\n", nombreArchivo);
+}
+
+//Hazme una funcion que escriba en disparos.txt el pid del GANADOR y WINS!
+void escribirWins(const char* nombreArchivo, int pidGanador) {
+    // Abre el archivo en modo escritura
+    FILE* archivo = fopen(nombreArchivo, "w");
+    if (archivo == NULL) {
+        printf("Error al abrir el archivo.\n");
+        return;
+    }
+    // Escribe el pid del ganador y WINS!
+    fprintf(archivo, "PID %d WINS!", pidGanador);
+    // Cierra el archivo
+    fclose(archivo);
+    printf("Se escribió el pid del ganador y WINS! en el archivo %s.\n", nombreArchivo);
+}
 
 void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOponente) {
     srand(time(NULL) + jugador);  // Inicializar la semilla para generar números aleatorios
@@ -364,52 +455,52 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
     ultima_coordenada.x = 0;
     ultima_coordenada.y = 0;
     int pid = getpid();
-    int contador_disparos = 0;
-    int salir=1;
+    int finJuego = 0;// Variable de control para salir del bucle
     
-    while (salir==1) {
+    while (!finJuego) {
         int x, y;
         int disparo_aleatorio = 1;
         int disparidad = 1;
         int barco_hundido = 0;
-        while(disparidad == 1){
-        disparidad = 0;
+        while (disparidad == 1) {
+            disparidad = 0;
 
-        if (ultima_direccion == 0 || barco_hundido) {
-            // Generar coordenadas de disparo aleatorias
-            x = rand() % tableroOponente->dimensionX;
-            y = rand() % tableroOponente->dimensionY;
-            Coordenada coordenada_provisional;
-            coordenada_provisional.x = x;
-            coordenada_provisional.y = y;
-            // Recorrer y añadir elementos al array
-            for (int i = 0; i < array->tamano; i++) {
-                Coordenada coordenada_array = array->elementos[i];
-                if(coordenada_provisional.x == coordenada_array.x && coordenada_provisional.y == coordenada_array.y){
-                    disparidad = 1;
-                }
-
-            }
-        } else {
-            // Disparo en la dirección anterior
-            x = ultima_coordenada.x;
-            y = ultima_coordenada.y;
-
-            // Determinar la siguiente coordenada según la dirección
-            if (ultima_direccion == 1 && x < tableroOponente->dimensionX - 1) {
-                x++;
-            } else if (ultima_direccion == 2 && y < tableroOponente->dimensionY - 1) {
-                y++;
-            } else if (ultima_direccion == 3 && x > 0) {
-                x--;
-            } else if (ultima_direccion == 4 && y > 0) {
-                y--;
-            } else {
-                // Si no es posible seguir en la dirección, disparar aleatoriamente
+            if (ultima_direccion == 0 || barco_hundido) {
+                // Generar coordenadas de disparo aleatorias
                 x = rand() % tableroOponente->dimensionX;
                 y = rand() % tableroOponente->dimensionY;
+                Coordenada coordenada_provisional;
+                coordenada_provisional.x = x;
+                coordenada_provisional.y = y;
+                // Recorrer y añadir elementos al array
+                for (int i = 0; i < array->tamano; i++) {
+                    Coordenada coordenada_array = array->elementos[i];
+                    if (coordenada_provisional.x == coordenada_array.x && coordenada_provisional.y == coordenada_array.y) {
+                        disparidad = 1;
+                        break;
+                    }
+                }
+            } else {
+                // Disparo en la dirección anterior
+                x = ultima_coordenada.x;
+                y = ultima_coordenada.y;
+
+                // Determinar la siguiente coordenada según la dirección
+                if (ultima_direccion == 1 && x < tableroOponente->dimensionX - 1) {
+                    x++;
+                } else if (ultima_direccion == 2 && y < tableroOponente->dimensionY - 1) {
+                    y++;
+                } else if (ultima_direccion == 3 && x > 0) {
+                    x--;
+                } else if (ultima_direccion == 4 && y > 0) {
+                    y--;
+                } else {
+                    // Si no es posible seguir en la dirección, disparar aleatoriamente
+                    x = rand() % tableroOponente->dimensionX;
+                    y = rand() % tableroOponente->dimensionY;
+                }
             }
-        }}
+        }
 
         Coordenada coordenada;
         coordenada.x = x;
@@ -455,51 +546,45 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
         }
 
         if (tipoBarco) {
-            
             printf("¡El jugador %d ha TOCADO en un barco del jugador %d! Coordenadas: %d, %d\n", jugador, oponente, coordenada.x, coordenada.y);
             ultima_direccion = 0; // Reiniciar la dirección
             char mensaje[50];
             sprintf(mensaje, "%d, %d : TOCADO", coordenada.x, coordenada.y);
             escribirDisparo("disparos.txt", mensaje, pid, jugador);
-            if(jugador == 1){
-                borrar_coordenada(coordenada.x, coordenada.y,"tablero2.txt", jugador);
+            if (jugador == 1) {
+                borrar_coordenada(coordenada.x, coordenada.y, "tablero2.txt", jugador);
+                if (cuantasCoordenadasQuedan("tablero2.txt")==0) {
+                printf("GAME OVER. GANA 1 Todas las coordenadas del tablero del jugador %d han sido disparadas.\n", oponente);
+                //llama al pid del jugador 2 para que termine
+                
 
-                // Verificar si se han disparado todas las coordenadas
-
-                if (coordenada.x == NULL && coordenada.y == NULL) {
-                    printf("GAME OVER. GANA 2 Todas las coordenadas del tablero del jugador %d han sido disparadas.\n", jugador);
-                    salir=0;  // Salir del bucle while si se han disparado todas las coordenadas
-                      // Salir del bucle while si se han disparado todas las coordenadas
+                //salir del bucle while si ya no quedan mas coordenadas
+                  return;
+                
                 }
+            } else if (jugador == 2) {
+                borrar_coordenada(coordenada.x, coordenada.y, "tablero1.txt", jugador);
+                if (cuantasCoordenadasQuedan("tablero1.txt")==0) {
+                printf("GAME OVER. GANA 2 Todas las coordenadas del tablero del jugador %d han sido disparadas.\n", oponente);
+                
+            
+                ///salir del bucle while si ya no quedan mas coordenadas
+                
+                  return;
+                
 
-            }
-            if(jugador == 2){
-                borrar_coordenada(coordenada.x, coordenada.y,"tablero1.txt", jugador);
-                contador_disparos++;  // Incrementar el contador de disparos
-
-                // Verificar si se han disparado todas las coordenadas
-
-                 if (coordenada.x == NULL && coordenada.y == NULL) {
-                    printf("GAME OVER. GANA 1 Todas las coordenadas del tablero del jugador %d han sido disparadas.\n", jugador);
-                      // Salir del bucle while si se han disparado todas las coordenadas
-                      salir=0;  // Salir del bucle while si se han disparado todas las coordenadas
                 }
-
             }
-            
-            
+
             ultima_coordenada = coordenada;
-            
 
             // Crear un objeto Disparo y almacenar la información del disparo
             Disparo disparo;
             disparo.pid = pid;
             disparo.coordenada = coordenada;
-            
+
             // Realizar las acciones necesarias con el disparo, como registrar el disparo en una lista de disparos realizados
             // y compartir la información del disparo con el oponente, si es necesario.
-            
-
         } else {
             printf("El jugador %d ha disparado al AGUA. Coordenadas: %d, %d\n", jugador, coordenada.x, coordenada.y);
             if (disparo_aleatorio) {
@@ -507,6 +592,7 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
                 char mensaje[50];
                 sprintf(mensaje, "%d, %d : AGUA", coordenada.x, coordenada.y);
                 escribirDisparo("disparos.txt", mensaje, pid, jugador);
+
 
                 // Crear un objeto Disparo y almacenar la información del disparo
                 Disparo disparo;
@@ -520,6 +606,9 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
 
         ultima_coordenada = coordenada;
 
+        // Verificar si se han disparado todas las coordenadas
+        
+
         // Esperar un tiempo aleatorio entre 0 y 10 segundos antes de realizar el siguiente disparo
         int tiempoEspera = rand() % 11;
         sleep(tiempoEspera);
@@ -530,7 +619,8 @@ void atacante(int jugador, const Tablero* miTablero, const Tablero* tableroOpone
 
 int main() {
     reiniciarArchivo("disparos.txt");
-    
+    reiniciarArchivo("archivo_elim.txt");
+
     Tablero tablero1;
     EstadoBarcos estadoBarcos1;
     cargarTablero("tablero1.txt", &tablero1);
@@ -566,11 +656,13 @@ int main() {
             waitpid(pid2, &status2, 0);
 
             if (WIFEXITED(status1)) {
+                
                 printf("El jugador 1 ha finalizado\n");
             }
             if (WIFEXITED(status2)) {
                 printf("El jugador 2 ha finalizado\n");
             }
+            crearArchivoBatalla("disparos.txt",pid1, pid2);
         } else {
             perror("Error al crear el proceso del jugador 2");
         }
