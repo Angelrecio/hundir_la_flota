@@ -1,1 +1,0 @@
-void generar_mapas();

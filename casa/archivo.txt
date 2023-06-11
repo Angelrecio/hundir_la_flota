@@ -1,5 +1,0 @@
-5 5
-Portaviones 1
-0 3, 1 3, 2 3, 3 3Bombarderos 1
-0 1, 2 1Fragatas 1
-0 2, 1 2, 
